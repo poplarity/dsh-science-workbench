@@ -1,53 +1,62 @@
-# dsh-bio-workbench
+# dsh-science
 
-面向生信分析的可复现 DSH 工作台插件。目标形态：Jupyter 的 cell/内联图组织 + Claude Science 的 agent 驱动 + Nextflow/nf-core 级的 provenance。
+English | [中文](README.zh.md)
 
-> **核心承诺**：每张图、每个分析产物都可溯源、可重放 —— 回答"它 = 哪段代码 + 哪些输入 + 什么环境 + 什么参数/种子"，并一键重跑。
+A reproducible science workbench plugin for the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness): Jupyter-style cells and inline figures, driven by an agent, with Nextflow/nf-core-grade provenance.
 
-## 能力
+> **Core promise**: every figure and artifact is traceable and replayable — you can answer "it = which code + which inputs + which environment + which params/seed", and re-run it in one click.
 
-- **代码出图 → 反馈 → 重画**：agent 跑自包含 cell 出图，图内联显示；结构化反馈挂到图上，`bio_rerun_cell` 生成派生版本（v1 → v2 → v3）。
-- **文件/产物管理**：每个项目一个目录 + 明文 `manifest.json` 账本（cells + artifacts + provenance + 反馈）。
-- **可复现**：自包含脚本 + 全新子进程 + `environment.lock` + SHA-256 输入/输出哈希 + 固定 seed。
-- **git 版本化**：项目自动 `git init`，每步自动本地 commit（不 push）。
-- **跨平台**：Host 的 shell 层按平台切换命令方言 —— macOS/Linux 用 bash（`shasum`/`mkdir -p`/`mv`/`open`），Windows 用 PowerShell（`Get-FileHash`/`New-Item`/`Move-Item`/`explorer.exe`），Python 解释器在 Windows 上自动用 `python`（POSIX 用 `python3`）。
+## Features
 
-## 工具
+- **Code → figure → feedback → redraw**: the agent runs a self-contained cell to produce figures shown inline; structured feedback is attached to each figure, and `bio_rerun_cell` produces a derived version (v1 → v2 → v3).
+- **Artifact management**: each project is a directory with a plain-text `manifest.json` ledger (cells + artifacts + provenance + feedback).
+- **Reproducible**: self-contained scripts + fresh subprocess + `environment.lock` + SHA-256 input/output hashes + fixed seed.
+- **Git versioned**: each project is auto `git init`-ed; every step is auto-committed locally (never pushed).
+- **Cross-platform**: the Host shell layer switches dialect per platform — bash on macOS/Linux, PowerShell on Windows; the Python interpreter auto-uses `python` on Windows and `python3` on POSIX.
 
-8 个 agent 工具：`bio_init_project` / `bio_run_cell` / `bio_rerun_cell` / `bio_add_feedback` / `bio_get_project` / `bio_list_projects` / `bio_set_projects_dir` / `bio_delete_cell`。配套「分析工作台」网页标签页（内联图 + 反馈 + 溯源 + 删除 cell）。
+## Tools
 
-## 安装
+Eight agent tools: `bio_init_project`, `bio_run_cell`, `bio_rerun_cell`, `bio_add_feedback`, `bio_get_project`, `bio_list_projects`, `bio_set_projects_dir`, `bio_delete_cell` — plus the "Analysis workbench" web tab (inline figures, feedback, provenance, delete cell).
 
-这是一个 **DSH 双面包**（Host + Client）。装成 profile bundle 后，工具全局可用、工作台标签页全局出现、并在「设置 → 插件」里可见。
+## Install
+
+This is a dual-face DSH plugin (Host + Client). Installed as a profile bundle, the tools become globally available, the workbench tab appears globally, and the plugin shows up under Settings → Plugins.
 
 ```bash
-# 1. 把本仓库软链到 profile 的 node_modules 兜底层
-ln -sfn /path/to/dsh-bio-workbench "$HOME/.dsh/profiles/node_modules/dsh-bio-workbench"
+# 1. Symlink this repo into the profile's node_modules fallback
+ln -sfn /path/to/dsh-science "$HOME/.dsh/profiles/node_modules/dsh-science"
 
-# 2. 在 profile 的 package.json 的 dsh.profile.bundles 里加入 "dsh-bio-workbench"
-#    （$HOME/.dsh/profiles/<profile>/package.json）
+# 2. Add "dsh-science" to dsh.profile.bundles in the profile package.json
+#    ($HOME/.dsh/profiles/<profile>/package.json)
 
-# 3. 重启 dsh web
+# 3. Restart dsh web
 ```
 
-重启后开任意新会话即可：`bio_*` 工具在工具列表里，「分析工作台」标签页在对话页，插件在设置里可见。
+After restart, open any new session: the `bio_*` tools are in the tool list, the "Analysis workbench" tab is in the conversation page, and the plugin is visible in Settings.
 
-## 目录结构
+## Usage flow
+
+1. `bio_init_project` — create a project.
+2. `bio_run_cell` — run an analysis cell and write figures to `figures/`.
+3. Review the inline figure → `bio_add_feedback` to record → `bio_rerun_cell` to redraw with edits.
+4. Open the "Analysis workbench" tab for the notebook / artifacts / feedback view.
+
+## Directory structure
 
 ```
-lib/index.js         Host 半：执行 / manifest 记账 / 工具 / HTTP 数据接口
-lib/client.js        Client 半：工作台标签页（浏览器 bundle，经 /biowb/* 取数）
-index.js             入口再导出（profile out-of-tree 解析兜底）
-cordis.patch.yml     bundle 补丁（插入 dsh-bio-workbench 行）
-skills/              约定 skill
-docs/                设计文档
-examples/            示例分析项目
+lib/index.js         Host half: execution / manifest ledger / tools / HTTP data routes
+lib/client.js        Client half: workbench tab (browser bundle, fetches /biowb/*)
+index.js             entry re-export (profile out-of-tree resolution fallback)
+cordis.patch.yml     bundle patch (inserts the dsh-science row)
+skills/              convention skill
+docs/                design doc
+examples/            example analysis project
 ```
 
-## 数据流
+## Data flow
 
-- Host 是单一事实来源：项目数据、manifest、provenance 都在磁盘（`~/bio-projects/<name>/`）。
-- Client 是纯投影：浏览器经同源 `fetch('/biowb/<method>')` 读写，Host 用 `webServer` 服务这些路由（不依赖 typert Remote 桥，因此不需要 Harness monorepo 构建）。
+- The Host is the single source of truth: project data, manifest and provenance live on disk (`~/bio-projects/<name>/`).
+- The Client is a pure projection: the browser reads/writes over same-origin `fetch('/biowb/<method>')`, served by the Host through the `webServer` service — no typert Remote bridge, so no harness monorepo build is required.
 
 ## License
 

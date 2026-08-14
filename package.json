@@ -1,7 +1,7 @@
 {
-  "name": "dsh-bio-workbench",
+  "name": "dsh-science",
   "version": "0.1.0",
-  "description": "Reproducible bioinformatics workbench plugin for the DeepSeek Harness: agent-driven cells, inline figures with feedback/rerun, manifest provenance, and environment snapshots.",
+  "description": "A reproducible science workbench plugin for the DeepSeek Harness: agent-driven cells, inline figures with feedback/rerun, manifest provenance, and environment snapshots.",
   "license": "MIT",
   "type": "module",
   "main": "lib/index.js",
@@ -21,11 +21,20 @@
   "keywords": [
     "dsh",
     "deepseek-harness",
+    "dsh-plugin",
     "bioinformatics",
-    "reproducibility",
+    "reproducible-research",
+    "workbench",
     "jupyter",
     "agent"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/poplarity/dsh-science.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "lint": "node --check lib/index.js"
   },

@@ -1,4 +1,4 @@
-# dsh-bio-workbench bundle patch (Phase 2).
+# dsh-science bundle patch (Phase 2).
 #
 # Applied as ONE insert over the empty profile root when this package is
 # installed as a profile bundle (it declares `dsh.bundle.patch`). The Host
@@ -6,10 +6,10 @@
 # `dsh.client` declaration + `exports["./client"]`, discovered by the
 # deployment's client-modules scan and built by the harness web pipeline.
 #
-# The row references the package's own name, so once `dsh-bio-workbench` is
+# The row references the package's own name, so once `dsh-science` is
 # installed into a profile (or the deployment's node_modules), the Loader
 # resolves it directly. The plugin registers the `bio_*` tools into the host
 # `tools` registry, which the agent preset exposes per session.
 - insert:
-    - id: bio-workbench
-      name: 'dsh-bio-workbench'
+    - id: dsh-science
+      name: 'dsh-science'

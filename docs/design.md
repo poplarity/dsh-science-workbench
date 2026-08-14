@@ -1,4 +1,4 @@
-# dsh-bio-workbench 设计文档
+# dsh-science 设计文档
 
 面向生信分析的可复现 DSH 工作台插件。目标形态对齐 Jupyter（cell/内联图）与 Claude Science（agent 驱动 + compute run/artifact + provenance）的混合式：**agent 是执行引擎**，所有产出以结构化 notebook 呈现，每个 cell/图/文件可单独重跑、评论、溯源。
 
@@ -50,7 +50,7 @@
 ## 四、目录结构（本仓库）
 
 ```
-dsh-bio-workbench/
+dsh-science/
 ├─ host/index.js        # Host 半（Node 进程：执行/账本/工具）
 ├─ client/index.js      # Client 半（浏览器：图卡片 + 工作台 tab）
 ├─ skills/bio-workbench/SKILL.md
