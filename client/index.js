@@ -9,38 +9,70 @@ return {
     const h = React.createElement
 
     styles.insert(`
-      .biowb { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: var(--color-text, inherit); }
-      .biowb h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; opacity: .7; }
-      .biowb .panel { border: 1px solid var(--color-border, rgba(128,128,128,.25)); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
-      .biowb .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-      .biowb .cell { border-left: 3px solid var(--color-accent, #4a9eff); padding: 8px 10px; margin: 8px 0; background: var(--color-surface-2, rgba(0,0,0,.03)); border-radius: 4px; }
-      .biowb .cell.err { border-left-color: #e5484d; }
-      .biowb .cell.pending { border-left-color: #b0b0b0; }
-      .biowb .fig { max-width: 100%; border: 1px solid var(--color-border, rgba(128,128,128,.25)); border-radius: 6px; margin: 8px 0; }
-      .biowb .btn { cursor: pointer; border: 1px solid var(--color-border, rgba(128,128,128,.4)); background: var(--color-surface-1, rgba(0,0,0,.04)); color: var(--color-text, inherit); border-radius: 6px; padding: 4px 10px; font-size: 12px; }
-      .biowb .btn:hover { background: var(--color-surface-2, rgba(0,0,0,.08)); }
-      .biowb .btn.primary { border-color: transparent; background: var(--color-accent, #4a9eff); color: #fff; }
-      .biowb input[type=text], .biowb textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--color-border, rgba(128,128,128,.4)); border-radius: 6px; padding: 6px 8px; font-size: 12px; background: var(--color-surface-1, rgba(0,0,0,.02)); color: var(--color-text, inherit); }
-      .biowb .muted { opacity: .62; font-size: 11px; }
-      .biowb .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
-      .biowb .kv { margin: 2px 0; }
-      .biowb .tag { display: inline-block; border-radius: 4px; padding: 1px 6px; font-size: 10px; margin-right: 4px; background: var(--color-surface-2, rgba(0,0,0,.08)); }
-      .biowb .fb { border-top: 1px dashed var(--color-border, rgba(128,128,128,.3)); margin-top: 6px; padding-top: 6px; }
+      .biowb { font-family: var(--dsw-font-family, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif); color: var(--dsw-alias-label-primary); line-height: 1.55; font-size: 13px; }
+      .biowb * { box-sizing: border-box; }
+      .biowb-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+      .biowb-title { font-size: 14px; font-weight: 600; }
+      .biowb-root { font-size: 11px; color: var(--dsw-alias-label-secondary); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+      .biowb-section { border: 1px solid var(--dsw-alias-border-l2); border-radius: 14px; padding: 16px; margin-bottom: 14px; background: var(--dsw-alias-bg-layer-1); box-shadow: var(--dsw-shadow-lv2, 0 2px 8px rgba(15,17,21,.06)); }
+      .biowb-section > h3 { margin: 0 0 12px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--dsw-alias-label-secondary); font-weight: 600; }
+      .biowb-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .biowb-cols { display: flex; gap: 14px; align-items: flex-start; }
+      .biowb-col-left { flex: 0 0 300px; }
+      .biowb-col-right { flex: 1 1 auto; min-width: 0; }
+      @media (max-width: 720px) { .biowb-cols { flex-direction: column; } .biowb-col-left { flex: 1 1 auto; width: 100%; } }
+      .biowb-fig { max-width: 100%; max-height: 640px; display: block; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; margin: 10px 0; cursor: zoom-in; }
+      .biowb-btn { cursor: pointer; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary); border-radius: 999px; padding: 6px 14px; font-size: 12px; font-weight: 500; line-height: 1.4; transition: background .12s ease, border-color .12s ease; }
+      .biowb-btn:hover { background: var(--dsw-alias-interactive-bg-hover); border-color: var(--dsw-alias-border-l2); }
+      .biowb-btn.primary { border-color: transparent; background: var(--dsw-alias-button-info-fill); color: #fff; }
+      .biowb-btn.primary:hover { background: var(--dsw-alias-button-info-hover, var(--dsw-alias-button-info-fill)); }
+      .biowb-input, .biowb-textarea, .biowb-select { border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; padding: 7px 14px; font-size: 12px; background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary); transition: border-color .12s ease; }
+      .biowb-input:focus, .biowb-textarea:focus, .biowb-select:focus { outline: none; border-color: var(--dsw-alias-state-business-primary); }
+      .biowb-input { width: 100%; }
+      .biowb-muted { color: var(--dsw-alias-label-secondary); font-size: 11px; }
+      .biowb-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+      .biowb-tag { display: inline-block; border-radius: 999px; padding: 2px 10px; font-size: 10px; font-weight: 600; line-height: 1.5; }
+      .biowb-tag.ok { color: var(--dsw-alias-state-success-primary); background: color-mix(in srgb, var(--dsw-alias-state-success-primary) 14%, transparent); }
+      .biowb-tag.error { color: var(--dsw-alias-state-error-primary); background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 14%, transparent); }
+      .biowb-tag.kind { color: var(--dsw-alias-label-secondary); background: var(--dsw-alias-bg-layer-2); }
+      .biowb-step { border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; cursor: pointer; background: var(--dsw-alias-bg-layer-2); transition: border-color .12s ease, background .12s ease; }
+      .biowb-step:hover { border-color: var(--dsw-alias-border-l2); background: var(--dsw-alias-interactive-bg-hover); }
+      .biowb-step.active { border-color: var(--dsw-alias-state-business-primary); background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 8%, transparent); }
+      .biowb-kv { display: flex; gap: 10px; margin: 3px 0; }
+      .biowb-kv-key { flex: 0 0 74px; color: var(--dsw-alias-label-secondary); }
+      .biowb-step-title { font-size: 12px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .biowb-spacer { flex: 1 1 auto; }
+      .biowb-fb-list { margin: 6px 0; }
+      .biowb-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; background: var(--dsw-alias-bg-layer-2); border: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-primary); padding: 12px; border-radius: 10px; overflow: auto; max-height: 240px; white-space: pre-wrap; margin: 8px 0; }
+      .biowb-seg { display: inline-flex; background: var(--dsw-alias-bg-layer-2); border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; padding: 2px; }
+      .biowb-seg-item { border: none; background: transparent; color: var(--dsw-alias-label-secondary); border-radius: 999px; padding: 4px 14px; font-size: 12px; cursor: pointer; transition: background .12s ease, color .12s ease; }
+      .biowb-seg-item.active { background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); box-shadow: 0 1px 2px rgba(15,17,21,.08); }
+      .biowb-iconbtn { cursor: pointer; border: none; background: transparent; color: var(--dsw-alias-label-secondary); border-radius: 999px; padding: 6px 9px; font-size: 13px; line-height: 1; transition: background .12s ease, color .12s ease; }
+      .biowb-iconbtn:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
+      .biowb-lb { position: fixed; inset: 0; background: rgba(0,0,0,.82); display: flex; align-items: center; justify-content: center; z-index: 9999; cursor: zoom-out; }
+      .biowb-lb-img { max-width: 92vw; max-height: 92vh; border-radius: 12px; cursor: default; box-shadow: 0 8px 40px rgba(0,0,0,.5); }
+      .biowb-lb-close { position: fixed; top: 18px; right: 20px; background: rgba(255,255,255,.14); border: none; color: #fff; font-size: 20px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; }
     `)
 
     // -------------------------------------------------------------------
-    // Shared async-state hook: fetch the project, expose {data, refresh}
+    // Project state: track the selected project, expose a `call` that
+    // injects the project name into every Host write.
     // -------------------------------------------------------------------
     function useProject() {
       const [data, setData] = React.useState(null)
+      const [selectedName, setSelectedName] = React.useState(null)
       const [error, setError] = React.useState(null)
       const [loading, setLoading] = React.useState(false)
 
-      function refresh() {
+      function fetch(name) {
         setLoading(true)
-        host.call('getProject', {}).then(function (d) {
+        host.call('getProject', name ? { name: name } : {}).then(function (d) {
           setData(d)
           setError(null)
+          if (!name) {
+            if (d.current && d.current.name) setSelectedName(d.current.name)
+            else if (d.projects && d.projects.length === 1) setSelectedName(d.projects[0].name)
+          }
         }).catch(function (e) {
           setError(String(e && e.message ? e.message : e))
         }).finally(function () {
@@ -48,8 +80,41 @@ return {
         })
       }
 
-      React.useEffect(function () { refresh() }, [])
-      return { data, error, loading, refresh }
+      function call(method, args) {
+        const a = Object.assign({}, args || {})
+        if (selectedName && a.name === undefined) a.name = selectedName
+        return host.call(method, a)
+      }
+
+      function select(name) {
+        setSelectedName(name)
+        fetch(name)
+      }
+
+      function createProject(newName) {
+        return host.call('initProject', { name: newName }).then(function () {
+          setSelectedName(newName)
+          return fetch(newName)
+        })
+      }
+
+      function setDir(dir) {
+        return host.call('setProjectsDir', { dir: dir }).then(function () {
+          setSelectedName(null)
+          return fetch(null)
+        })
+      }
+
+      function reveal(path, isDir) {
+        return call('revealInFinder', { path: path, isDir: isDir }).catch(function (e) { console.error(e) })
+      }
+
+      function refresh() { fetch(selectedName) }
+
+      React.useEffect(function () { fetch(null) }, [])
+
+      const projects = (data && data.projects) || []
+      return { data, error, loading, selectedName, projects, select, createProject, setDir, reveal, refresh, call }
     }
 
     function fmtTime(iso) {
@@ -57,17 +122,38 @@ return {
       try { return String(iso).replace('T', ' ').slice(0, 19) } catch (e) { return String(iso) }
     }
 
+    function figureOf(figures, path) {
+      if (!figures) return null
+      for (let i = 0; i < figures.length; i++) if (figures[i].path === path) return figures[i]
+      return null
+    }
+
+    function Lightbox(props) {
+      if (!props.src) return null
+      return h('div', { className: 'biowb-lb', onClick: props.onClose },
+        h('img', { className: 'biowb-lb-img', src: props.src, alt: 'preview', onClick: function (e) { e.stopPropagation() } }),
+        h('button', { className: 'biowb-lb-close', onClick: props.onClose }, '✕')
+      )
+    }
+
+    function FigureImage(props) {
+      const f = props.figure
+      if (!f || !f.base64) return h('div', { className: 'biowb-muted' }, '(无图像数据)')
+      const src = 'data:' + f.mime + ';base64,' + f.base64
+      return h('img', { className: 'biowb-fig', src: src, alt: f.path, onClick: function () { props.onZoom(src) } })
+    }
+
     function kv(label, value) {
-      return h('div', { className: 'kv muted' }, label + ': ', h('span', { className: 'mono' }, typeof value === 'string' ? value : JSON.stringify(value)))
+      return h('div', { className: 'biowb-kv' },
+        h('span', { className: 'biowb-kv-key' }, label),
+        h('span', { className: 'biowb-mono' }, typeof value === 'string' ? value : JSON.stringify(value)))
     }
 
     function Provenance(props) {
       const a = props.artifact || {}
-      const cellId = a.producedBy || ''
-      return h('div', { className: 'muted' },
-        kv('产出 cell', cellId),
-        kv('输入哈希', a.inputHashes || {}),
-        kv('输出哈希', (a.outputHash || '').slice(0, 16) + '…'),
+      return h('div', { className: 'biowb-muted' },
+        kv('产出 cell', a.producedBy || ''),
+        kv('输出哈希', (a.outputHash || '').slice(0, 18) + '…'),
         kv('参数', a.params || {}),
         kv('seed', a.seed),
         a.derivedFrom && a.derivedFrom.length ? kv('派生自', a.derivedFrom.join(', ')) : null,
@@ -75,205 +161,226 @@ return {
       )
     }
 
-    // -------------------------------------------------------------------
-    // FigureCard: image + provenance + feedback form + rerun editor
-    // -------------------------------------------------------------------
-    function FigureCard(props) {
-      const fig = props.figure
-      const art = fig.artifact || {}
-      const [feedback, setFeedback] = React.useState('')
+    // Feedback is recorded, then sent to the agent as a fresh message
+    // (decision #1: feedback == a turn for the LLM to act on).
+    function FeedbackBox(props) {
+      const [text, setText] = React.useState('')
       const [msg, setMsg] = React.useState('')
-      const [showProv, setShowProv] = React.useState(false)
-      const [showRerun, setShowRerun] = React.useState(false)
-      const [rerunCode, setRerunCode] = React.useState('')
-      const [rerunMsg, setRerunMsg] = React.useState('')
 
-      const src = fig.base64 ? ('data:' + fig.mime + ';base64,' + fig.base64) : null
-
-      function submitFeedback() {
-        if (!feedback.trim()) return
-        host.call('addFeedback', { artifactPath: fig.path, text: feedback.trim() }).then(function () {
-          setFeedback('')
-          setMsg('反馈已记录 → 在对话里告诉 agent 如何修改，或用下方「重跑」编辑代码。')
+      function submit() {
+        const t = text.trim()
+        if (!t) return
+        props.call('addFeedback', { artifactPath: props.artifactPath, text: t }).then(function () {
+          setText('')
+          setMsg('已记录并发送给 agent')
+          if (props.inputActions) {
+            try {
+              props.inputActions.setDraft('用户对 ' + props.artifactPath + ' 的反馈：' + t + '。请据此修改代码并重跑出图。')
+              props.inputActions.submit()
+            } catch (e) {}
+          }
           if (props.onChanged) props.onChanged()
         }).catch(function (e) { setMsg('失败: ' + (e && e.message ? e.message : e)) })
       }
 
-      function openRerun() {
-        const cellId = art.producedBy
-        if (!cellId) return
-        host.call('getCellCode', { cellId: cellId }).then(function (c) {
-          setRerunCode(c && c.code ? c.code : '')
-          setShowRerun(true)
-        }).catch(function (e) { setRerunMsg('读取代码失败: ' + (e && e.message ? e.message : e)) })
+      return h('div', { style: { marginTop: 10 } },
+        (props.feedback && props.feedback.length) ? h('div', { className: 'biowb-fb-list' },
+          (props.feedback || []).map(function (f, i) {
+            return h('div', { key: i, className: 'biowb-muted' }, '💬 ', f.text, ' · ', fmtTime(f.at))
+          })
+        ) : null,
+        h('div', { className: 'biowb-row', style: { marginTop: 4 } },
+          h('input', { className: 'biowb-input', type: 'text', value: text, placeholder: '反馈：改 x 轴 / 换配色 / 加 p 值…', onChange: function (e) { setText(e.target.value) } }),
+          h('button', { className: 'biowb-btn primary', onClick: submit }, '让 agent 重画')
+        ),
+        msg ? h('div', { className: 'biowb-muted' }, msg) : null
+      )
+    }
+
+    // One artifact detail: figure (large + lightbox) or file, provenance, and
+    // feedback ONLY for figures (decision #5).
+    function ArtifactDetail(props) {
+      const art = props.artifact
+      const fig = figureOf(props.figures, art.path)
+      const [panel, setPanel] = React.useState(null)
+      const [code, setCode] = React.useState(null)
+
+      function toggleCode() {
+        if (panel !== 'code') {
+          if (code === null) {
+            props.call('getCellCode', { cellId: art.producedBy }).then(function (r) {
+              setCode(r && r.code ? r.code : '(无代码)')
+            }).catch(function () { setCode('(读取失败)') })
+          }
+          setPanel('code')
+        } else {
+          setPanel(null)
+        }
       }
 
-      function submitRerun() {
-        const cellId = art.producedBy
-        setRerunMsg('正在重跑…')
-        host.call('rerunCell', { cellId: cellId, editedCode: rerunCode }).then(function (r) {
-          setRerunMsg('已重跑: ' + r.cellId + ' (' + r.status + ')')
-          setShowRerun(false)
-          if (props.onChanged) props.onChanged()
-        }).catch(function (e) { setRerunMsg('重跑失败: ' + (e && e.message ? e.message : e)) })
+      return h('div', { style: { padding: '6px 0 12px' } },
+        h('div', { className: 'biowb-row' },
+          h('span', { className: 'biowb-mono' }, art.path),
+          h('span', { className: 'biowb-tag kind' }, art.kind),
+          h('span', { className: 'biowb-muted' }, 'by ' + art.producedBy),
+          h('span', { className: 'biowb-spacer' }),
+          h('button', { className: 'biowb-btn', onClick: function () { props.reveal(art.path, false) } }, '📁 Finder')
+        ),
+        fig ? h(FigureImage, { figure: fig, onZoom: props.onZoom }) : null,
+        h('div', { className: 'biowb-row', style: { marginTop: 6 } },
+          h('div', { className: 'biowb-seg' },
+            h('button', { className: 'biowb-seg-item' + (panel === 'prov' ? ' active' : ''), onClick: function () { setPanel(panel === 'prov' ? null : 'prov') } }, '溯源'),
+            h('button', { className: 'biowb-seg-item' + (panel === 'code' ? ' active' : ''), onClick: toggleCode }, '代码')
+          )
+        ),
+        panel === 'prov' ? h(Provenance, { artifact: art }) : null,
+        panel === 'code' ? h('pre', { className: 'biowb-code' }, code) : null,
+        art.kind === 'figure' ? h(FeedbackBox, { artifactPath: art.path, feedback: art.feedback, call: props.call, inputActions: props.inputActions, onChanged: props.onChanged }) : null
+      )
+    }
+
+    function StepItem(props) {
+      const c = props.cell
+      return h('div', { className: 'biowb-step' + (props.active ? ' active' : ''), onClick: function () { props.onSelect(c.id) } },
+        h('div', { className: 'biowb-row' },
+          h('span', { className: 'biowb-mono' }, c.id),
+          h('span', { className: 'biowb-tag ' + (c.status === 'error' ? 'error' : 'ok') }, c.status)
+        ),
+        h('div', { className: 'biowb-step-title' }, c.title),
+        c.derivedFrom ? h('div', { className: 'biowb-muted' }, '← ' + c.derivedFrom) : null
+      )
+    }
+
+    function ProjectHeader(props) {
+      const [showNew, setShowNew] = React.useState(false)
+      const [showDir, setShowDir] = React.useState(false)
+      const [newName, setNewName] = React.useState('')
+      const [dir, setDir] = React.useState('')
+
+      function create() {
+        const n = newName.trim()
+        if (!n) return
+        props.createProject(n).then(function () { setShowNew(false); setNewName('') }).catch(function (e) { console.error(e) })
       }
 
-      return h('div', { className: 'biowb' },
-        h('div', { className: 'mono muted' }, fig.path),
-        src ? h('img', { className: 'fig', src: src, alt: fig.path }) : h('div', { className: 'muted' }, '(无图像数据)'),
-        h('div', { className: 'row' },
-          h('button', { className: 'btn', onClick: function () { setShowProv(!showProv) } }, showProv ? '收起溯源' : '溯源'),
-          h('button', { className: 'btn', onClick: openRerun }, '重跑')
-        ),
-        showProv ? h(Provenance, { artifact: art }) : null,
-        h('div', { className: 'fb' },
-          h('div', { className: 'row' },
-            h('input', { type: 'text', value: feedback, placeholder: '反馈：改 x 轴 / 换配色 / 加 p 值…', onChange: function (e) { setFeedback(e.target.value) } }),
-            h('button', { className: 'btn primary', onClick: submitFeedback }, '记录反馈')
+      function applyDir() {
+        const d = dir.trim()
+        if (!d) return
+        props.setDir(d).then(function () { setShowDir(false); setDir('') }).catch(function (e) { console.error(e) })
+      }
+
+      return h('div', null,
+        h('div', { className: 'biowb-head' },
+          h('span', { className: 'biowb-title' }, '项目'),
+          h('select', { className: 'biowb-select', value: props.selectedName || '', onChange: function (e) { props.select(e.target.value) } },
+            (props.projects || []).map(function (p) { return h('option', { key: p.name, value: p.name }, p.name) })
           ),
-          msg ? h('div', { className: 'muted' }, msg) : null,
-          (art.feedback && art.feedback.length) ? h('div', { className: 'muted' },
-            (art.feedback || []).map(function (f, i) {
-              return h('div', { key: i }, '· ', f.text, ' (', fmtTime(f.at), ')')
-            })
-          ) : null
+          h('button', { className: 'biowb-btn', onClick: function () { setShowNew(!showNew); setShowDir(false) } }, showNew ? '取消' : '＋ 新建'),
+          h('span', { className: 'biowb-spacer' }),
+          h('button', { className: 'biowb-iconbtn', title: '设置存储目录', onClick: function () { setShowDir(!showDir); setShowNew(false) } }, '⚙'),
+          h('button', { className: 'biowb-iconbtn', title: '在 Finder 打开项目目录', onClick: function () { props.reveal('', true) } }, '📁'),
+          h('button', { className: 'biowb-iconbtn', title: '刷新', onClick: props.refresh }, props.loading ? '…' : '↻')
         ),
-        showRerun ? h('div', { className: 'fb' },
-          h('textarea', { rows: 8, value: rerunCode, onChange: function (e) { setRerunCode(e.target.value) } }),
-          h('div', { className: 'row', style: { marginTop: 6 } },
-            h('button', { className: 'btn primary', onClick: submitRerun }, '运行编辑后的代码'),
-            h('button', { className: 'btn', onClick: function () { setShowRerun(false) } }, '取消')
-          ),
-          rerunMsg ? h('div', { className: 'muted' }, rerunMsg) : null
+        showNew ? h('div', { className: 'biowb-row', style: { marginBottom: 12 } },
+          h('input', { className: 'biowb-input', type: 'text', value: newName, placeholder: '项目名（如 chip_tss）', style: { maxWidth: 240 }, onChange: function (e) { setNewName(e.target.value) } }),
+          h('button', { className: 'biowb-btn primary', onClick: create }, '创建')
+        ) : null,
+        showDir ? h('div', { className: 'biowb-row', style: { marginBottom: 12 } },
+          h('input', { className: 'biowb-input', type: 'text', value: dir, placeholder: '绝对路径，如 /Users/wangyian/Documents/DSH/bio-projects', style: { maxWidth: 420 }, onChange: function (e) { setDir(e.target.value) } }),
+          h('button', { className: 'biowb-btn primary', onClick: applyDir }, '设置目录')
         ) : null
       )
     }
 
-    // -------------------------------------------------------------------
-    // BioWorkbench: the three-panel tab (notebook / artifacts / iterations)
-    // -------------------------------------------------------------------
-    function BioWorkbench() {
-      const { data, error, loading, refresh } = useProject()
-      const [name, setName] = React.useState('demo')
+    function BioWorkbench(props) {
+      const p = useProject()
+      const cur = p.data && p.data.current
+      const cells = cur ? (cur.manifest.cells || []) : []
+      const figures = cur ? (cur.figures || []) : []
+      const [selectedCellId, setSelectedCellId] = React.useState(null)
+      const [lightboxSrc, setLightboxSrc] = React.useState(null)
 
-      function initProject() {
-        host.call('initProject', { name: name }).then(function () { refresh() }).catch(function (e) { console.error(e) })
-      }
+      const effectiveCellId = selectedCellId && cells.some(function (c) { return c.id === selectedCellId })
+        ? selectedCellId
+        : (cells.length ? cells[cells.length - 1].id : null)
 
-      if (loading && !data) return h('div', { className: 'biowb muted' }, '加载中…')
-      if (error) return h('div', { className: 'biowb muted' }, '错误: ', error)
-      const cur = data && data.current
+      const selectedCell = cells.find(function (c) { return c.id === effectiveCellId })
 
-      if (!cur) {
-        return h('div', { className: 'biowb' },
-          h('div', { className: 'panel' },
-            h('h3', null, '初始化分析项目'),
-            h('div', { className: 'row' },
-              h('input', { type: 'text', value: name, onChange: function (e) { setName(e.target.value) } }),
-              h('button', { className: 'btn primary', onClick: initProject }, '创建项目')
-            ),
-            h('div', { className: 'muted' }, '项目将创建在 <workspace>/bio-projects/ 下，含 code/ data/ figures/ 与 manifest.json，并 git init + 环境快照。')
-          )
-        )
-      }
-
-      const manifest = cur.manifest || {}
-      const cells = manifest.cells || []
-      const artifacts = manifest.artifacts || []
-
-      // Iterations = feedback entries + derivedFrom lineage
-      const iterations = []
-      for (const a of artifacts) {
-        for (const f of (a.feedback || [])) iterations.push({ artifact: a.path, at: f.at, text: f.text, kind: 'feedback' })
-        if (a.derivedFrom && a.derivedFrom.length) iterations.push({ artifact: a.path, at: a.createdAt, text: '派生自 ' + a.derivedFrom.join(', '), kind: 'derive' })
-      }
+      if (p.loading && !p.data) return h('div', { className: 'biowb' }, h('div', { className: 'biowb-muted' }, '加载中…'))
+      if (p.error) return h('div', { className: 'biowb' }, h('div', { className: 'biowb-muted' }, '错误: ', p.error))
 
       return h('div', { className: 'biowb' },
-        h('div', { className: 'row' },
-          h('strong', null, '项目: ' + cur.name),
-          h('span', { className: 'muted mono' }, cur.root),
-          h('button', { className: 'btn', onClick: refresh }, loading ? '刷新中…' : '刷新')
-        ),
+        h(Lightbox, { src: lightboxSrc, onClose: function () { setLightboxSrc(null) } }),
 
-        h('div', { className: 'panel' },
-          h('h3', null, '① Notebook（cells）'),
-          cells.length === 0 ? h('div', { className: 'muted' }, '还没有 cell。在对话里让 agent 用 bio_run_cell 跑一段分析。') : null,
-          cells.map(function (c) {
-            return h('div', { className: 'cell ' + (c.status === 'error' ? 'err' : (c.status === 'pending' ? 'pending' : '')), key: c.id },
-              h('div', { className: 'row' },
-                h('span', { className: 'mono' }, c.id),
-                h('strong', null, c.title),
-                h('span', { className: 'tag' }, c.status),
-                c.derivedFrom ? h('span', { className: 'muted' }, '← ' + c.derivedFrom) : null
-              ),
-              h('div', { className: 'muted mono' }, c.script),
-              (c.artifacts && c.artifacts.length) ? h('div', { className: 'muted' }, '产物: ' + c.artifacts.join(', ')) : null,
-              c.stderrTail ? h('pre', { className: 'muted mono', style: { whiteSpace: 'pre-wrap', maxHeight: 120, overflow: 'auto' } }, c.stderrTail) : null
-            )
-          })
-        ),
+        h(ProjectHeader, {
+          projects: p.projects, selectedName: p.selectedName, select: p.select,
+          createProject: p.createProject, setDir: p.setDir, reveal: p.reveal,
+          refresh: p.refresh, loading: p.loading
+        }),
 
-        h('div', { className: 'panel' },
-          h('h3', null, '② 产物（Artifacts）'),
-          artifacts.length === 0 ? h('div', { className: 'muted' }, '暂无产物。') : null,
-          artifacts.map(function (a) {
-            return h('div', { key: a.path },
-              h('div', { className: 'row' },
-                h('span', { className: 'mono' }, a.path),
-                h('span', { className: 'tag' }, a.kind),
-                h('span', { className: 'muted' }, 'by ' + a.producedBy)
-              ),
-              h(Provenance, { artifact: a })
+        p.projects.length === 0 ? h('div', { className: 'biowb-section' },
+          h('div', { className: 'biowb-muted' }, '还没有项目。点「＋ 新建」创建第一个，或在对话里让 agent 用 bio_init_project。')
+        ) : (!cur ? h('div', { className: 'biowb-section' },
+          h('div', { className: 'biowb-muted' }, '请从下拉选择一个项目。')
+        ) : h('div', null,
+          h('div', { className: 'biowb-cols' },
+            h('div', { className: 'biowb-col-left biowb-section' },
+              h('h3', null, '分析步骤'),
+              cells.length === 0 ? h('div', { className: 'biowb-muted' }, '暂无步骤。') : null,
+              cells.map(function (c) {
+                return h(StepItem, { key: c.id, cell: c, active: c.id === effectiveCellId, onSelect: setSelectedCellId })
+              })
+            ),
+            h('div', { className: 'biowb-col-right biowb-section' },
+              h('h3', null, '产物详情'),
+              selectedCell ? h('div', null,
+                h('div', { className: 'biowb-row', style: { marginBottom: 6 } },
+                  h('span', { className: 'biowb-mono' }, selectedCell.id),
+                  h('strong', null, selectedCell.title),
+                  h('span', { className: 'biowb-spacer' }),
+                  h('button', { className: 'biowb-btn', onClick: function () { p.reveal(selectedCell.script, false) } }, '脚本')
+                ),
+                (selectedCell.artifacts && selectedCell.artifacts.length)
+                  ? selectedCell.artifacts.map(function (ap) {
+                      const art = (cur.manifest.artifacts || []).find(function (a) { return a.path === ap })
+                      return art ? h(ArtifactDetail, { key: ap, artifact: art, figures: figures, call: p.call, inputActions: props.inputActions, onChanged: p.refresh, reveal: p.reveal, onZoom: setLightboxSrc }) : null
+                    })
+                  : h('div', { className: 'biowb-muted' }, '该步骤暂无产物。')
+              ) : h('div', { className: 'biowb-muted' }, '选择左侧步骤查看详情。')
             )
-          })
-        ),
-
-        h('div', { className: 'panel' },
-          h('h3', null, '③ 反馈与迭代（Feedback / lineage）'),
-          iterations.length === 0 ? h('div', { className: 'muted' }, '还没有反馈记录。') : null,
-          iterations.map(function (it, i) {
-            return h('div', { key: i, className: 'muted' },
-              h('span', { className: 'tag' }, it.kind),
-              h('span', { className: 'mono' }, it.artifact),
-              ' — ', it.text,
-              h('span', null, ' (', fmtTime(it.at), ')')
-            )
-          })
-        )
+          )
+        ))
       )
     }
 
-    // -------------------------------------------------------------------
-    // BioRunCellCard: inline card in the conversation flow
-    // -------------------------------------------------------------------
-    function BioRunCellCard() {
-      const { data, error, refresh } = useProject()
-      const cur = data && data.current
+    // Inline card for bio_run_cell tool calls (chat flow).
+    function BioRunCellCard(props) {
+      const p = useProject()
+      const cur = p.data && p.data.current
       const figures = cur && cur.figures ? cur.figures.slice().reverse() : []
+      const [lightboxSrc, setLightboxSrc] = React.useState(null)
 
       return h('div', { className: 'biowb' },
-        error ? h('div', { className: 'muted' }, '错误: ', error) : null,
-        figures.length === 0 ? h('div', { className: 'muted' }, '（暂无图 — 用 bio_run_cell 出图后在此内联显示）') : null,
+        h(Lightbox, { src: lightboxSrc, onClose: function () { setLightboxSrc(null) } }),
+        p.error ? h('div', { className: 'biowb-muted' }, '错误: ', p.error) : null,
+        figures.length === 0 ? h('div', { className: 'biowb-muted' }, '（暂无图 — 用 bio_run_cell 出图后在此内联显示）') : null,
         figures.map(function (f) {
-          return h(FigureCard, { key: f.path, figure: f, onChanged: refresh })
+          return h(ArtifactDetail, { key: f.path, artifact: f.artifact, figures: figures, call: p.call, inputActions: props.inputActions, onChanged: p.refresh, reveal: p.reveal, onZoom: setLightboxSrc })
         })
       )
     }
 
-    // -------------------------------------------------------------------
-    // Slot registrations
-    // -------------------------------------------------------------------
     slots.inject('conversation.view', function () {
       slots.register(
         { name: 'conversation.view', id: 'bio-workbench', order: 20, label: '分析工作台' },
-        function () { return h(BioWorkbench) }
+        function (props) { return h(BioWorkbench, { inputActions: props && props.inputActions }) }
       )
     })
 
     slots.inject('tool.call.toolview', function () {
       slots.register(
         { name: 'tool.call.toolview', key: 'bio_run_cell' },
-        function () { return h(BioRunCellCard) }
+        function (props) { return h(BioRunCellCard, { inputActions: props && props.inputActions }) }
       )
     })
   }

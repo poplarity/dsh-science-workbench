@@ -11,14 +11,16 @@ return {
     const workspaceRoot =
       (sandboxPolicy && typeof sandboxPolicy.workspaceRoot === 'string' && sandboxPolicy.workspaceRoot) ||
       '/Users/wangyian/Documents/DSH'
-    const projectsRoot = workspaceRoot.replace(/\/+$/, '') + '/bio-projects'
+    const settingsFile = workspaceRoot + '/.dsh-bio-workbench.json'
 
-    // In-memory pointer to the currently active project (the manifest on disk is the durable source of truth).
+    // projectsRoot is configurable; default under the workspace root, then
+    // overridden by the persisted preference (settingsFile).
+    let projectsRoot = workspaceRoot.replace(/\/+$/, '') + '/bio-projects'
+    let lastProject = null
+    let settingsLoaded = null
+
     const state = { currentProject: null }
 
-    // ---------------------------------------------------------------------
-    // Small helpers (all reversible/stateless — they read/write through fs)
-    // ---------------------------------------------------------------------
     async function readText(path) {
       try {
         return await fs.readText(await fs.resolve(path))
@@ -44,7 +46,6 @@ return {
     }
 
     function bytesToBase64(bytes) {
-      // Correct binary -> base64 (the sandbox `btoa` is UTF-8 text, not latin1).
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
       let out = ''
       for (let i = 0; i < bytes.length; i += 3) {
@@ -67,11 +68,6 @@ return {
     }
 
     function runShell(command, workdir, timeoutMs, signal) {
-      // Prototype: pass an explicit full-access sandbox policy so the executor runs
-      // unconfined. The macOS `sandbox-exec` wrapper is unavailable on this host
-      // (spawn ENOENT via the subprocess scrubbed PATH), and the session policy is
-      // currently danger-full-access. Phase 2: resolve the session's actual mode
-      // instead of forcing full access.
       const policy = {
         mode: 'danger-full-access',
         workspaceRoot: (sandboxPolicy && sandboxPolicy.workspaceRoot) || workspaceRoot
@@ -88,21 +84,17 @@ return {
     }
 
     async function sha256File(absPath) {
-      const r = await runShell('shasum -a 256 "' + absPath + '" 2>/dev/null', projectsRoot, 30000)
+      const r = await runShell('shasum -a 256 "' + absPath + '" 2>/dev/null', workspaceRoot, 30000)
       const out = String(r.stdout.text || '').trim()
       const m = out.match(/\b([0-9a-f]{64})\b/)
       return m ? m[1] : null
     }
 
     async function mkdirs(root) {
-      // Run from the workspace root (which always exists) with absolute paths:
-      // the project directory itself may not exist yet, and spawn reports a missing
-      // cwd as ENOENT.
       await runShell('mkdir -p "' + root + '/code" "' + root + '/data" "' + root + '/figures"', workspaceRoot, 30000)
     }
 
     async function gitCommit(root, message) {
-      // Auto-commit is local-only (never pushes). Tolerate "nothing to commit".
       await runShell('git add -A >/dev/null 2>&1; git commit -m "' + String(message).replace(/"/g, '\\"') + '" >/dev/null 2>&1 || true', root, 30000)
     }
 
@@ -110,9 +102,33 @@ return {
       await runShell('git init -q 2>/dev/null; git config user.email "bio-workbench@local" 2>/dev/null; git config user.name "bio-workbench" 2>/dev/null', root, 30000)
     }
 
-    // ---------------------------------------------------------------------
-    // Manifest read/write (the durable source of truth)
-    // ---------------------------------------------------------------------
+    async function ensureProjectsRoot() {
+      if (settingsLoaded) return await settingsLoaded
+      settingsLoaded = (async () => {
+        const raw = await readText(settingsFile)
+        if (raw) {
+          try {
+            const s = JSON.parse(raw)
+            if (s && typeof s.projectsRoot === 'string' && s.projectsRoot) projectsRoot = s.projectsRoot.replace(/\/+$/, '')
+            if (s && typeof s.lastProject === 'string' && s.lastProject) lastProject = s.lastProject
+          } catch (err) {}
+        }
+      })()
+      await settingsLoaded
+    }
+
+    async function persistSettings() {
+      await writeText(settingsFile, JSON.stringify({ projectsRoot: projectsRoot, lastProject: lastProject }, null, 2))
+    }
+
+    async function setLastProject(name) {
+      await ensureProjectsRoot()
+      if (name && lastProject !== name) {
+        lastProject = name
+        await persistSettings()
+      }
+    }
+
     function emptyManifest(name, root, environment) {
       return {
         schemaVersion: 1,
@@ -139,6 +155,7 @@ return {
     }
 
     async function listProjects() {
+      await ensureProjectsRoot()
       const entries = await listDir(projectsRoot)
       const out = []
       for (const e of entries) {
@@ -149,9 +166,22 @@ return {
       return out
     }
 
-    // ---------------------------------------------------------------------
-    // Environment snapshot (decision #3: environment.lock)
-    // ---------------------------------------------------------------------
+    async function resolveProjectRoot(args) {
+      await ensureProjectsRoot()
+      let root = null
+      if (args && args.name) root = projectsRoot + '/' + String(args.name).replace(/[^A-Za-z0-9._-]/g, '_')
+      else if (state.currentProject) root = state.currentProject.root
+      else if (lastProject) {
+        const m = await readManifest(projectsRoot + '/' + lastProject)
+        if (m) root = projectsRoot + '/' + lastProject
+      }
+      if (!root) {
+        const projects = await listProjects()
+        if (projects.length === 1) root = projects[0].root
+      }
+      return root
+    }
+
     async function snapshotEnvironment(root, language) {
       language = language === 'R' ? 'R' : 'python'
       if (language === 'python') {
@@ -169,11 +199,8 @@ return {
       }
     }
 
-    // ---------------------------------------------------------------------
-    // Cell header contract (decision #9: declaration block = contract)
-    // ---------------------------------------------------------------------
     function buildHeader(meta) {
-      const comment = meta.language === 'R' ? '#' : '#'
+      const comment = '#'
       const lines = []
       lines.push(comment + ' @cell: ' + meta.cellId)
       lines.push(comment + ' @title: ' + (meta.title || ''))
@@ -192,9 +219,6 @@ return {
       return 'file'
     }
 
-    // ---------------------------------------------------------------------
-    // Figure discovery (scoped to figures/ — reliable, not whole-tree sniffing)
-    // ---------------------------------------------------------------------
     async function hashFigures(root) {
       const entries = await listDir(root + '/figures')
       const map = {}
@@ -204,6 +228,23 @@ return {
         if (h) map['figures/' + e.name] = h
       }
       return map
+    }
+
+    // Rename freshly produced figures to carry the producing cell id prefix,
+    // so the figures/ directory is self-describing (decision #6).
+    async function prefixFigures(root, cellId, newFigurePaths) {
+      const renamed = []
+      for (const rel of newFigurePaths) {
+        const base = rel.substring('figures/'.length)
+        if (base.indexOf(cellId + '_') === 0) {
+          renamed.push(rel)
+          continue
+        }
+        const newRel = 'figures/' + cellId + '_' + base
+        await runShell('mv "' + root + '/' + rel + '" "' + root + '/' + newRel + '"', workspaceRoot, 30000)
+        renamed.push(newRel)
+      }
+      return renamed
     }
 
     async function registerArtifact(manifest, spec) {
@@ -231,36 +272,66 @@ return {
       return artifact
     }
 
-    // ---------------------------------------------------------------------
-    // Business: init / run / feedback / rerun
-    // ---------------------------------------------------------------------
+    // Human-readable index.md at the project root (decision #6).
+    async function writeIndex(root, manifest) {
+      const lines = ['# ' + (manifest.name || '') + ' — 分析索引', '']
+      lines.push('> 生成于 ' + new Date().toISOString(), '')
+      for (const c of (manifest.cells || [])) {
+        const figs = (c.artifacts || []).filter(function (a) { return a.indexOf('figures/') === 0 })
+        lines.push('## ' + c.id + ' · ' + (c.title || ''))
+        lines.push('- 状态: ' + (c.status || ''))
+        lines.push('- 脚本: ' + (c.script || ''))
+        if (figs.length) lines.push('- 图: ' + figs.join(', '))
+        if (c.derivedFrom) lines.push('- 派生自: ' + c.derivedFrom)
+        lines.push('')
+      }
+      await writeText(root + '/index.md', lines.join('\n'))
+    }
+
     async function initProject(args) {
+      await ensureProjectsRoot()
       const name = String(args && args.name ? args.name : 'project').replace(/[^A-Za-z0-9._-]/g, '_')
       const root = projectsRoot + '/' + name
       await mkdirs(root)
       const environment = await snapshotEnvironment(root, args && args.language)
       const manifest = emptyManifest(name, root, environment)
       await writeManifest(root, manifest)
+      await writeIndex(root, manifest)
       await gitInit(root)
       state.currentProject = { name, root }
+      await setLastProject(name)
       return { name, root, environment }
     }
 
+    async function setProjectsDir(args) {
+      await ensureProjectsRoot()
+      const dir = String(args && args.dir ? args.dir : '').trim()
+      if (!dir || dir.charAt(0) !== '/') throw new Error('projects dir must be an absolute path')
+      projectsRoot = dir.replace(/\/+$/, '')
+      await persistSettings()
+      settingsLoaded = Promise.resolve()
+      state.currentProject = null
+      return { projectsRoot }
+    }
+
+    async function revealInFinder(args) {
+      const root = await resolveProjectRoot(args)
+      if (!root) return { ok: false, error: 'no active project' }
+      const p = String(args.path || '')
+      const abs = p.charAt(0) === '/' ? p : (root + '/' + p)
+      if (args.isDir === true) await runShell('open "' + abs + '"', workspaceRoot, 30000)
+      else await runShell('open -R "' + abs + '"', workspaceRoot, 30000)
+      return { ok: true }
+    }
+
     async function getProject(args) {
-      // Resolve the project to serve: explicit name, or current, or the only one.
-      let root = null
-      if (args && args.name) root = projectsRoot + '/' + String(args.name).replace(/[^A-Za-z0-9._-]/g, '_')
-      else if (state.currentProject) root = state.currentProject.root
-      if (!root) {
-        const projects = await listProjects()
-        if (projects.length === 1) root = projects[0].root
-      }
+      if (args && args.name) await setLastProject(String(args.name))
+      const root = await resolveProjectRoot(args)
       if (!root) return { projects: await listProjects(), current: null }
 
       const manifest = await readManifest(root)
       if (!manifest) return { projects: await listProjects(), current: null }
 
-      // Attach base64 figures for Client rendering (capped per image).
       const figures = []
       for (const art of manifest.artifacts || []) {
         if (art.kind !== 'figure') continue
@@ -285,9 +356,8 @@ return {
     }
 
     async function runCell(args, signal) {
-      const cur = state.currentProject
-      if (!cur) throw new Error('no active project — call bio_init_project first')
-      const root = cur.root
+      const root = await resolveProjectRoot(args)
+      if (!root) throw new Error('no active project — call bio_init_project first')
       const manifest = await readManifest(root)
       if (!manifest) throw new Error('manifest missing')
 
@@ -313,9 +383,10 @@ return {
 
       const after = await hashFigures(root)
       const newFigurePaths = Object.keys(after).filter(function (k) { return before[k] !== after[k] })
+      const renamedPaths = await prefixFigures(root, cellId, newFigurePaths)
 
       const artifactPaths = []
-      for (const rel of newFigurePaths) {
+      for (const rel of renamedPaths) {
         const art = await registerArtifact(manifest, {
           root, path: rel, kind: 'figure', producedBy: cellId,
           params: meta.params, seed: meta.seed, inputs: meta.inputs
@@ -348,6 +419,7 @@ return {
         derivedFrom: null
       })
       await writeManifest(root, manifest)
+      await writeIndex(root, manifest)
       await gitCommit(root, 'cell ' + cellId + ': ' + meta.title + ' (' + status + ')')
 
       return {
@@ -360,9 +432,8 @@ return {
     }
 
     async function addFeedback(args) {
-      const cur = state.currentProject
-      if (!cur) throw new Error('no active project')
-      const root = cur.root
+      const root = await resolveProjectRoot(args)
+      if (!root) throw new Error('no active project')
       const manifest = await readManifest(root)
       if (!manifest) throw new Error('manifest missing')
       const art = (manifest.artifacts || []).find(function (a) { return a.path === args.artifactPath })
@@ -370,26 +441,27 @@ return {
       art.feedback = art.feedback || []
       art.feedback.push({ at: new Date().toISOString(), text: String(args.text || '') })
       await writeManifest(root, manifest)
+      await writeIndex(root, manifest)
       await gitCommit(root, 'feedback on ' + args.artifactPath + ': ' + String(args.text || '').slice(0, 80))
       return { ok: true, artifactPath: args.artifactPath, feedbackCount: art.feedback.length }
     }
 
     async function rerunCell(args, signal) {
-      const cur = state.currentProject
-      if (!cur) throw new Error('no active project')
-      const root = cur.root
+      const root = await resolveProjectRoot(args)
+      if (!root) throw new Error('no active project')
       const manifest = await readManifest(root)
       if (!manifest) throw new Error('manifest missing')
       const prev = (manifest.cells || []).find(function (c) { return c.id === args.cellId })
       if (!prev) throw new Error('cell not found: ' + args.cellId)
 
-      // Derive a versioned cell id (cell_0001 -> cell_0001_v2 -> cell_0001_v3 …).
-      let version = 2
-      const base = prev.id
-      let newCellId = base + '_v' + version
-      while ((manifest.cells || []).some(function (c) { return c.id === newCellId })) {
-        version += 1
-        newCellId = base + '_v' + version
+      let newCellId
+      const vm = prev.id.match(/^(.*)_v(\d+)$/)
+      if (vm) newCellId = vm[1] + '_v' + (parseInt(vm[2], 10) + 1)
+      else newCellId = prev.id + '_v2'
+      let guard = 0
+      while ((manifest.cells || []).some(function (c) { return c.id === newCellId }) && guard < 50) {
+        newCellId = newCellId + '_x'
+        guard += 1
       }
 
       const language = prev.language === 'R' ? 'R' : 'python'
@@ -413,9 +485,10 @@ return {
 
       const after = await hashFigures(root)
       const newFigurePaths = Object.keys(after).filter(function (k) { return before[k] !== after[k] })
+      const renamedPaths = await prefixFigures(root, newCellId, newFigurePaths)
 
       const artifactPaths = []
-      for (const rel of newFigurePaths) {
+      for (const rel of renamedPaths) {
         const art = await registerArtifact(manifest, {
           root, path: rel, kind: 'figure', producedBy: newCellId,
           params: meta.params, seed: meta.seed, inputs: meta.inputs,
@@ -440,6 +513,7 @@ return {
         derivedFrom: prev.id
       })
       await writeManifest(root, manifest)
+      await writeIndex(root, manifest)
       await gitCommit(root, 'rerun ' + newCellId + ' (derived from ' + prev.id + ', ' + status + ')')
 
       return {
@@ -452,29 +526,25 @@ return {
       }
     }
 
-    // ---------------------------------------------------------------------
-    // Client RPC surface (harness.handle) — Client -> Host, lossless JSON
-    // ---------------------------------------------------------------------
     harness.handle('getProject', function (args) { return getProject(args || {}) })
     harness.handle('listProjects', function () { return listProjects() })
     harness.handle('initProject', function (args) { return initProject(args || {}) })
     harness.handle('runCell', function (args) { return runCell(args || {}, undefined) })
     harness.handle('addFeedback', function (args) { return addFeedback(args || {}) })
     harness.handle('rerunCell', function (args) { return rerunCell(args || {}, undefined) })
+    harness.handle('setProjectsDir', function (args) { return setProjectsDir(args || {}) })
+    harness.handle('revealInFinder', function (args) { return revealInFinder(args || {}) })
     harness.handle('getCellCode', async function (args) {
-      const cur = state.currentProject
-      if (!cur) return null
-      const manifest = await readManifest(cur.root)
+      const root = await resolveProjectRoot(args)
+      if (!root) return null
+      const manifest = await readManifest(root)
       if (!manifest) return null
       const cell = (manifest.cells || []).find(function (c) { return c.id === (args && args.cellId) })
       if (!cell) return null
-      const code = await readText(cur.root + '/' + cell.script)
+      const code = await readText(root + '/' + cell.script)
       return { cellId: cell.id, script: cell.script, code: code || '' }
     })
 
-    // ---------------------------------------------------------------------
-    // Model-visible tools (agent calls these)
-    // ---------------------------------------------------------------------
     function registerTool(name, description, parameters, execute) {
       const tool = harness.defineTool({
         name,
@@ -492,16 +562,24 @@ return {
     }
 
     registerTool('bio_init_project',
-      'Create or open a reproducible bioinformatics analysis project. Creates the project directory skeleton (code/ data/ figures/), writes manifest.json, snapshots the Python/R environment into environment.lock, and git-inits the project. Call this before bio_run_cell.',
+      'Create or open a reproducible bioinformatics analysis project. Creates the project directory skeleton (code/ data/ figures/), writes manifest.json and index.md, snapshots the Python/R environment into environment.lock, and git-inits the project. Call this before bio_run_cell.',
       {
         name: { type: 'string', required: true, description: 'Project directory name (sanitized to a safe folder name).' },
         language: { type: 'string', enum: ['python', 'R'], description: 'Primary analysis language; defaults to python.' }
       },
       function (args) { return initProject(args) })
 
-    registerTool('bio_run_cell',
-      'Run one self-contained analysis cell inside the active project. Writes a versioned script with a declaration header (cell id, params, seed, inputs/outputs), executes it in a fresh Python/R subprocess with cwd = project root, discovers figures written to figures/, registers artifacts with SHA-256 provenance into manifest.json, and git-commits. Figures are saved under figures/ (e.g. figures/result.png); declare extra non-figure outputs in `outputs`.',
+    registerTool('bio_set_projects_dir',
+      'Set the absolute root directory where analysis projects are stored. Persisted across restarts. Call before creating projects to relocate them.',
       {
+        dir: { type: 'string', required: true, description: 'Absolute path for the projects root directory.' }
+      },
+      function (args) { return setProjectsDir(args) })
+
+    registerTool('bio_run_cell',
+      'Run one self-contained analysis cell inside the active project. Writes a versioned script with a declaration header (cell id, params, seed, inputs/outputs), executes it in a fresh Python/R subprocess with cwd = project root, discovers figures written to figures/, renames them with a cell-id prefix, registers artifacts with SHA-256 provenance into manifest.json, updates index.md, and git-commits. Figures are saved under figures/ (e.g. figures/result.png); declare extra non-figure outputs in `outputs`.',
+      {
+        name: { type: 'string', description: 'Optional project name to run the cell in.' },
         title: { type: 'string', required: true, description: 'Short human-readable cell title.' },
         code: { type: 'string', required: true, description: 'The self-contained script body (no header needed). Write figures to figures/ using relative paths.' },
         language: { type: 'string', enum: ['python', 'R'], description: 'Language for this cell; defaults to python.' },
@@ -515,15 +593,18 @@ return {
     registerTool('bio_add_feedback',
       'Record structured feedback on a produced artifact (e.g. a figure) into manifest.json and git-commit it. This is how a "redraw it" note becomes traceable iteration history.',
       {
-        artifactPath: { type: 'string', required: true, description: 'Artifact path as listed in the manifest (e.g. figures/tss_profile.png).' },
+        name: { type: 'string', description: 'Optional project name.' },
+        artifactPath: { type: 'string', required: true, description: 'Artifact path as listed in the manifest (e.g. figures/cell_0001_tss_profile.png).' },
         text: { type: 'string', required: true, description: 'The feedback text (what to change).' }
       },
       function (args) { return addFeedback(args) })
 
     registerTool('bio_get_project',
-      'Return the active project summary: manifest cells, artifacts with provenance, and feedback/iteration history. Use to inspect what has been produced and how.',
-      {},
-      function () { return getProject({}) })
+      'Return a project summary: manifest cells, artifacts with provenance, and feedback/iteration history. Pass name to select a specific project; otherwise uses the active project.',
+      {
+        name: { type: 'string', description: 'Optional project name to inspect.' }
+      },
+      function (args) { return getProject(args) })
 
     registerTool('bio_list_projects',
       'List all reproducible bioinformatics projects under the projects root.',
@@ -533,6 +614,7 @@ return {
     registerTool('bio_rerun_cell',
       'Re-run a cell with edited code as a new versioned cell (derived-from lineage recorded), re-discover figures, and register new artifacts. Use after feedback to regenerate a figure.',
       {
+        name: { type: 'string', description: 'Optional project name to re-run the cell in.' },
         cellId: { type: 'string', required: true, description: 'Id of the cell to re-run (e.g. cell_0001).' },
         editedCode: { type: 'string', required: true, description: 'The full replacement script body (header regenerated automatically).' }
       },
