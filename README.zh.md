@@ -1,4 +1,4 @@
-# dsh-science
+# dsh-science-workbench
 
 [English](README.md) | 中文
 
@@ -24,10 +24,10 @@
 
 ```bash
 # 本地开发（从源码目录）：
-dsh plugin --profile web add file:/path/to/dsh-science
+dsh plugin --profile web add file:/path/to/dsh-science-workbench
 
 # 从 npm（发布后）：
-dsh plugin --profile web add dsh-science
+dsh plugin --profile web add dsh-science-workbench
 ```
 
 然后重启 `dsh web`。`bio_*` 工具全局可用、「分析工作台」标签页出现、插件在「设置 → 插件」里可见。
@@ -45,7 +45,7 @@ dsh plugin --profile web add dsh-science
 lib/index.js         Host 半：执行 / manifest 记账 / 工具 / HTTP 数据接口
 lib/client.js        Client 半：工作台标签页（浏览器 bundle，经 /biowb/* 取数）
 index.js             入口再导出（profile out-of-tree 解析兜底）
-cordis.patch.yml     bundle 补丁（插入 dsh-science 行）
+cordis.patch.yml     bundle 补丁（插入 dsh-science-workbench 行）
 skills/              约定 skill
 docs/                设计文档
 examples/            示例分析项目

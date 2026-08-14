@@ -1,4 +1,4 @@
-# dsh-science
+# dsh-science-workbench
 
 English | [中文](README.zh.md)
 
@@ -24,10 +24,10 @@ This is a dual-face DSH plugin (Host + Client). Install it with the standard `ds
 
 ```bash
 # Local development (from a checkout):
-dsh plugin --profile web add file:/path/to/dsh-science
+dsh plugin --profile web add file:/path/to/dsh-science-workbench
 
 # From npm (once published):
-dsh plugin --profile web add dsh-science
+dsh plugin --profile web add dsh-science-workbench
 ```
 
 Then restart `dsh web`. The `bio_*` tools become globally available, the "Analysis workbench" tab appears, and the plugin shows up under Settings → Plugins.
@@ -45,7 +45,7 @@ Then restart `dsh web`. The `bio_*` tools become globally available, the "Analys
 lib/index.js         Host half: execution / manifest ledger / tools / HTTP data routes
 lib/client.js        Client half: workbench tab (browser bundle, fetches /biowb/*)
 index.js             entry re-export (profile out-of-tree resolution fallback)
-cordis.patch.yml     bundle patch (inserts the dsh-science row)
+cordis.patch.yml     bundle patch (inserts the dsh-science-workbench row)
 skills/              convention skill
 docs/                design doc
 examples/            example analysis project

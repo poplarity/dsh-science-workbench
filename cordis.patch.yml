@@ -1,4 +1,4 @@
-# dsh-science bundle patch.
+# dsh-science-workbench bundle patch.
 #
 # Applied as ONE insert over the empty profile root when this package is
 # installed as a profile bundle (it declares `dsh.bundle.patch`). The Host
@@ -7,10 +7,10 @@
 # deployment's client-modules scan (the client bundle is a hand-written
 # `window.__ModuleLoader__.load` module — no harness build required).
 #
-# The row references the package's own name, so once `dsh-science` is
+# The row references the package's own name, so once `dsh-science-workbench` is
 # installed into a profile (or the deployment's node_modules), the Loader
 # resolves it directly. The plugin registers the `bio_*` tools into the host
 # `tools` registry and serves the `/biowb/*` data routes for the workbench UI.
 - insert:
-    - id: dsh-science
-      name: 'dsh-science'
+    - id: dsh-science-workbench
+      name: 'dsh-science-workbench'

@@ -1,9 +1,9 @@
 ---
 name: bio-workbench
-description: 生信分析工作台（dsh-science）的可复现分析约定。当用户要创建或维护一个可复现的生信分析项目、用 bio_run_cell 跑分析并出图、登记产物 provenance、对图做结构化反馈并重画（反馈→改代码→重跑→派生新版本）时使用此 skill。触发词：生信项目、分析工作台、bio_run_cell、可复现出图、manifest、cell 契约、反馈重画。
+description: 生信分析工作台（dsh-science-workbench）的可复现分析约定。当用户要创建或维护一个可复现的生信分析项目、用 bio_run_cell 跑分析并出图、登记产物 provenance、对图做结构化反馈并重画（反馈→改代码→重跑→派生新版本）时使用此 skill。触发词：生信项目、分析工作台、bio_run_cell、可复现出图、manifest、cell 契约、反馈重画。
 ---
 
-# 生信分析工作台约定（dsh-science）
+# 生信分析工作台约定（dsh-science-workbench）
 
 这是 agent 在执行生信分析时必须遵守的约定。核心原则：**每个产物都可溯源、可重放**——回答"这张图 = 哪段代码 + 哪些输入 + 什么环境 + 什么参数/种子"，并能重跑。
 
