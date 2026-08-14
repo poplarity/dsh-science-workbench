@@ -37,16 +37,26 @@ examples/ 示例分析项目
 
 目标：把动态原型变成可 `npm install` 的静态双面包，随 profile bundle 挂载、随 agent preset 暴露 `bio_*` 工具，重启后依然存在。已就位：
 
-- `package.json` 声明了 `dsh.bundle.patch`（→ `cordis.patch.yml`）与 `dsh.client`（`platform: web`）+ `exports["./client"]`，对齐 Harness 双面包约定；
-- `cordis.patch.yml` 是 bundle 补丁，插入 `dsh-bio-workbench` 这一行（安装后由 Loader 按包名解析）。
+### 已完成：静态 Host（工具永久化）
 
-剩余步骤（依赖 Harness monorepo 构建链 / npm 发布，需在外部环境执行）：
+`lib/index.js` 是**纯 JS 静态 Host**（无 Client RPC）：把 `harness.defineTool/registerTool` 换成
+`@deepseek-ai/dsh-tools` 的 `defineTool` + `ctx.tools.register`，注册 8 个 `bio_*` 工具，逻辑与动态原型
+1:1。根目录 `index.js` 是入口再导出（profile 的 out-of-tree 解析按 `index.js` 找包）。
 
-1. **静态 ESM 入口**：把 `host/index.js` 的 `harness.defineTool/registerTool` 换成 `@deepseek-ai/dsh-tools` 的 `defineTool` + `ctx.tools.register`，把 `harness.handle`（动态专属的 Client RPC 桥）换成 `@Remote` + typert 生成的远程服务（`ctx.remote.<svc>.<method>`）。
-2. **Client 半构建**：`exports["./client"]` 指向的 `lib/client.js` 需由 Harness web 构建管线产出 `window.__ModuleLoader__.load(...)` 形式的浏览器 bundle。
-3. **安装挂载**：`npm publish`（或 `dsh plugin` 以本地路径/pnpm 安装）到 profile，随后 `standingKeyFor` 校验组合，再开真实会话确认 `bio_*` 工具清单。
+挂载方式：把仓库 symlink 到 profile 的 node_modules 兜底层，再在 agent preset `bio-workbench` 里加一行
+`name: 'dsh-bio-workbench'`。已用 `standingKeyFor` 校验 **mounted OK**。
 
-在此之前，动态插件（`biowb-1`，当前 `pkg-18`）是运行中的实现；上述只是把它永久化的收尾。
+```bash
+ln -sfn /path/to/dsh-bio-workbench "$HOME/.dsh/profiles/node_modules/dsh-bio-workbench"
+```
+
+重启 DSH 后，用 **Bio Workbench** 预设开新会话即可永久使用 `bio_*` 工具。
+
+### 剩余（可选）：浏览器工作台 UI 的静态化
+
+`src/index.ts`（`@Remote` 服务）+ `src/client.ts`（`ctx.remote` UI）是把「分析工作台」标签页也永久化的
+完整双面包，需要 Harness monorepo 的 tsdown + typert 生成器构建（步骤见 `BUILD.md`）。在此之前，
+浏览器 UI 继续由动态插件 `biowb-1`（`pkg-18`）提供。
 
 ## License
 
