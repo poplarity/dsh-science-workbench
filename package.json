@@ -4,11 +4,18 @@
   "description": "Reproducible bioinformatics workbench plugin for the DeepSeek Harness: agent-driven cells, inline figures with feedback/rerun, manifest provenance, and environment snapshots.",
   "license": "MIT",
   "type": "module",
+  "main": "host/index.js",
+  "exports": {
+    ".": "./host/index.js",
+    "./client": "./client/index.js",
+    "./package.json": "./package.json"
+  },
   "files": [
     "host",
     "client",
     "skills",
-    "docs"
+    "docs",
+    "cordis.patch.yml"
   ],
   "keywords": [
     "dsh",
@@ -21,7 +28,18 @@
   "scripts": {
     "lint": "node --check host/index.js && node --check client/index.js"
   },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-api-remotes": "^0.1.0-rc.6"
+  },
   "dsh": {
-    "note": "Phase 2 wires this package as a static bundle via dsh.profile.bundles + cordis patch (see docs/design.md §7)."
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": []
+    }
   }
 }
