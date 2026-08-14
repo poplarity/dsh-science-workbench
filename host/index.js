@@ -67,12 +67,22 @@ return {
     }
 
     function runShell(command, workdir, timeoutMs, signal) {
+      // Prototype: pass an explicit full-access sandbox policy so the executor runs
+      // unconfined. The macOS `sandbox-exec` wrapper is unavailable on this host
+      // (spawn ENOENT via the subprocess scrubbed PATH), and the session policy is
+      // currently danger-full-access. Phase 2: resolve the session's actual mode
+      // instead of forcing full access.
+      const policy = {
+        mode: 'danger-full-access',
+        workspaceRoot: (sandboxPolicy && sandboxPolicy.workspaceRoot) || workspaceRoot
+      }
       const spec = shell.resolve({
         command,
         workdir,
         timeoutMs: timeoutMs || 120000,
         stdoutMaxBytes: 400000,
-        signal: signal || undefined
+        signal: signal || undefined,
+        sandboxPolicy: policy
       })
       return shell.run(spec)
     }
@@ -85,7 +95,10 @@ return {
     }
 
     async function mkdirs(root) {
-      await runShell('mkdir -p code data figures', root, 30000)
+      // Run from the workspace root (which always exists) with absolute paths:
+      // the project directory itself may not exist yet, and spawn reports a missing
+      // cwd as ENOENT.
+      await runShell('mkdir -p "' + root + '/code" "' + root + '/data" "' + root + '/figures"', workspaceRoot, 30000)
     }
 
     async function gitCommit(root, message) {

@@ -84,3 +84,18 @@ dsh-bio-workbench/
 - 缓存复用 + 依赖图失效判定
 - Tier 1 视觉 reviewer 实装（配置视觉模型 endpoint）
 - 导出容器配方（Dockerfile / Apptainer def）
+- **uv.lock / renv 精确环境锁定**（原型当前用 `pip freeze` 快照 + `python3` 硬编码）
+- **沙箱策略正确解析**（原型为绕过 macOS `sandbox-exec` 的 scrubbed-PATH/cwd ENOENT，在 `runShell` 里硬编码 `danger-full-access`；Phase 2 改为解析会话真实模式）
+- **workspace root 解析**（原型用 `sandboxPolicy.workspaceRoot` = DSH 启动 cwd，项目落到了 `~/bio-projects/` 而非会话工作区下；Phase 2 对齐会话 workspace）
+
+## 八、原型验证结论（已跑通）
+
+用真实小例 `demo_tss` 跑通完整闭环，双证据（manifest + git）成立：
+
+```
+bio_init_project → 建目录 + manifest.json + environment.lock + git init
+bio_run_cell     → cell_0001 + figures/tss_profile.png（SHA-256 ee5d99c4…）
+bio_add_feedback → 反馈挂 figures/tss_profile.png（git: 186d033）
+bio_rerun_cell   → cell_0001_v2 + figures/tss_profile_v2.png（derivedFrom 链，git: a9b9975）
+bio_get_project  → 完整 provenance 可查（cells/artifacts/feedback/derivedFrom/哈希）
+```
