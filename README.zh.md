@@ -20,19 +20,17 @@
 
 ## 安装
 
-这是一个 DSH 双面包（Host + Client）。作为 profile bundle 安装后，工具全局可用、工作台标签页全局出现、插件在「设置 → 插件」里可见。
+这是一个 DSH 双面包（Host + Client）。用标准的 `dsh plugin` 命令安装 —— 它是对 pnpm 的薄封装：把包装进 profile 并自动加进 `dsh.profile.bundles`（因为本包声明了 `dsh.bundle.patch`）。
 
 ```bash
-# 1. 把本仓库软链到 profile 的 node_modules 兜底层
-ln -sfn /path/to/dsh-science "$HOME/.dsh/profiles/node_modules/dsh-science"
+# 本地开发（从源码目录）：
+dsh plugin --profile web add file:/path/to/dsh-science
 
-# 2. 在 profile 的 package.json 里把 "dsh-science" 加入 dsh.profile.bundles
-#    （$HOME/.dsh/profiles/<profile>/package.json）
-
-# 3. 重启 dsh web
+# 从 npm（发布后）：
+dsh plugin --profile web add dsh-science
 ```
 
-重启后开任意新会话即可：`bio_*` 工具在工具列表里，「分析工作台」标签页在对话页，插件在设置里可见。
+然后重启 `dsh web`。`bio_*` 工具全局可用、「分析工作台」标签页出现、插件在「设置 → 插件」里可见。
 
 ## 使用流程
 

@@ -20,19 +20,17 @@ Eight agent tools: `bio_init_project`, `bio_run_cell`, `bio_rerun_cell`, `bio_ad
 
 ## Install
 
-This is a dual-face DSH plugin (Host + Client). Installed as a profile bundle, the tools become globally available, the workbench tab appears globally, and the plugin shows up under Settings → Plugins.
+This is a dual-face DSH plugin (Host + Client). Install it with the standard `dsh plugin` command — a thin pnpm forwarder that installs the package into a profile and automatically adds it to `dsh.profile.bundles` (because the package declares `dsh.bundle.patch`).
 
 ```bash
-# 1. Symlink this repo into the profile's node_modules fallback
-ln -sfn /path/to/dsh-science "$HOME/.dsh/profiles/node_modules/dsh-science"
+# Local development (from a checkout):
+dsh plugin --profile web add file:/path/to/dsh-science
 
-# 2. Add "dsh-science" to dsh.profile.bundles in the profile package.json
-#    ($HOME/.dsh/profiles/<profile>/package.json)
-
-# 3. Restart dsh web
+# From npm (once published):
+dsh plugin --profile web add dsh-science
 ```
 
-After restart, open any new session: the `bio_*` tools are in the tool list, the "Analysis workbench" tab is in the conversation page, and the plugin is visible in Settings.
+Then restart `dsh web`. The `bio_*` tools become globally available, the "Analysis workbench" tab appears, and the plugin shows up under Settings → Plugins.
 
 ## Usage flow
 
