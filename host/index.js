@@ -19,10 +19,6 @@ return {
     // ---------------------------------------------------------------------
     // Small helpers (all reversible/stateless — they read/write through fs)
     // ---------------------------------------------------------------------
-    async function fsResolve(path) {
-      return await fs.resolve(path)
-    }
-
     async function readText(path) {
       try {
         return await fs.readText(await fs.resolve(path))
@@ -48,12 +44,19 @@ return {
     }
 
     function bytesToBase64(bytes) {
-      let bin = ''
-      const chunkSize = 0x8000
-      for (let i = 0; i < bytes.length; i += chunkSize) {
-        bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize))
+      // Correct binary -> base64 (the sandbox `btoa` is UTF-8 text, not latin1).
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+      let out = ''
+      for (let i = 0; i < bytes.length; i += 3) {
+        const b0 = bytes[i]
+        const b1 = i + 1 < bytes.length ? bytes[i + 1] : 0
+        const b2 = i + 2 < bytes.length ? bytes[i + 2] : 0
+        out += chars[b0 >> 2]
+        out += chars[((b0 & 3) << 4) | (b1 >> 4)]
+        out += i + 1 < bytes.length ? chars[((b1 & 15) << 2) | (b2 >> 6)] : '='
+        out += i + 2 < bytes.length ? chars[b2 & 63] : '='
       }
-      return btoa(bin)
+      return out
     }
 
     function tail(text, n) {
@@ -479,7 +482,7 @@ return {
       'Create or open a reproducible bioinformatics analysis project. Creates the project directory skeleton (code/ data/ figures/), writes manifest.json, snapshots the Python/R environment into environment.lock, and git-inits the project. Call this before bio_run_cell.',
       {
         name: { type: 'string', required: true, description: 'Project directory name (sanitized to a safe folder name).' },
-        language: { type: 'string', required: false, enum: ['python', 'R'], description: 'Primary analysis language; defaults to python.' }
+        language: { type: 'string', enum: ['python', 'R'], description: 'Primary analysis language; defaults to python.' }
       },
       function (args) { return initProject(args) })
 
@@ -488,11 +491,11 @@ return {
       {
         title: { type: 'string', required: true, description: 'Short human-readable cell title.' },
         code: { type: 'string', required: true, description: 'The self-contained script body (no header needed). Write figures to figures/ using relative paths.' },
-        language: { type: 'string', required: false, enum: ['python', 'R'], description: 'Language for this cell; defaults to python.' },
-        params: { type: 'json', required: false, description: 'Analysis parameters recorded for reproducibility (object).' },
-        seed: { type: 'integer', required: false, description: 'Random seed recorded for reproducibility; defaults to 42.' },
-        inputs: { type: 'array', items: { type: 'string' }, required: false, description: 'Input data file paths (relative to project root) hashed into provenance.' },
-        outputs: { type: 'array', items: { type: 'string' }, required: false, description: 'Expected non-figure output paths (figures/ is auto-discovered).' }
+        language: { type: 'string', enum: ['python', 'R'], description: 'Language for this cell; defaults to python.' },
+        params: { type: 'json', description: 'Analysis parameters recorded for reproducibility (object).' },
+        seed: { type: 'integer', description: 'Random seed recorded for reproducibility; defaults to 42.' },
+        inputs: { type: 'array', items: { type: 'string' }, description: 'Input data file paths (relative to project root) hashed into provenance.' },
+        outputs: { type: 'array', items: { type: 'string' }, description: 'Expected non-figure output paths (figures/ is auto-discovered).' }
       },
       function (args, exec) { return runCell(args, exec && exec.signal) })
 
