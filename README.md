@@ -12,51 +12,42 @@
 - **git 版本化**：项目自动 `git init`，每步自动本地 commit（不 push）。
 - **跨平台**：Host 的 shell 层按平台切换命令方言 —— macOS/Linux 用 bash（`shasum`/`mkdir -p`/`mv`/`open`），Windows 用 PowerShell（`Get-FileHash`/`New-Item`/`Move-Item`/`explorer.exe`），Python 解释器在 Windows 上自动用 `python`（POSIX 用 `python3`）。
 
-## 安装 / 使用（原型阶段）
+## 工具
 
-本仓库当前是**动态 Cordis 插件原型**（进程内临时运行），Host/Client 源码即 `host/index.js` 与 `client/index.js`。配套 skill 见 `skills/bio-workbench/SKILL.md`。
+8 个 agent 工具：`bio_init_project` / `bio_run_cell` / `bio_rerun_cell` / `bio_add_feedback` / `bio_get_project` / `bio_list_projects` / `bio_set_projects_dir` / `bio_delete_cell`。配套「分析工作台」网页标签页（内联图 + 反馈 + 溯源 + 删除 cell）。
 
-流程：
+## 安装
 
-1. `bio_init_project` 建项目；
-2. `bio_run_cell` 跑分析出图（图写进 `figures/`）；
-3. 用户看内联图 → 反馈 → `bio_add_feedback` 记录 → `bio_rerun_cell` 带编辑重画；
-4. "分析工作台" tab 看三面板（notebook / 产物 / 反馈迭代）。
+这是一个 **DSH 双面包**（Host + Client）。装成 profile bundle 后，工具全局可用、工作台标签页全局出现、并在「设置 → 插件」里可见。
+
+```bash
+# 1. 把本仓库软链到 profile 的 node_modules 兜底层
+ln -sfn /path/to/dsh-bio-workbench "$HOME/.dsh/profiles/node_modules/dsh-bio-workbench"
+
+# 2. 在 profile 的 package.json 的 dsh.profile.bundles 里加入 "dsh-bio-workbench"
+#    （$HOME/.dsh/profiles/<profile>/package.json）
+
+# 3. 重启 dsh web
+```
+
+重启后开任意新会话即可：`bio_*` 工具在工具列表里，「分析工作台」标签页在对话页，插件在设置里可见。
 
 ## 目录结构
 
 ```
-host/    Host 半：执行 / manifest 记账 / 工具 / RPC
-client/  Client 半：图内联卡片 + 三面板工作台 tab
-skills/  持久约定 skill
-docs/    设计文档
-examples/ 示例分析项目
+lib/index.js         Host 半：执行 / manifest 记账 / 工具 / HTTP 数据接口
+lib/client.js        Client 半：工作台标签页（浏览器 bundle，经 /biowb/* 取数）
+index.js             入口再导出（profile out-of-tree 解析兜底）
+cordis.patch.yml     bundle 补丁（插入 dsh-bio-workbench 行）
+skills/              约定 skill
+docs/                设计文档
+examples/            示例分析项目
 ```
 
-## Phase 2：静态插件包 + 组合挂载（进行中）
+## 数据流
 
-目标：把动态原型变成可 `npm install` 的静态双面包，随 profile bundle 挂载、随 agent preset 暴露 `bio_*` 工具，重启后依然存在。已就位：
-
-### 已完成：静态 Host（工具永久化）
-
-`lib/index.js` 是**纯 JS 静态 Host**（无 Client RPC）：把 `harness.defineTool/registerTool` 换成
-`@deepseek-ai/dsh-tools` 的 `defineTool` + `ctx.tools.register`，注册 8 个 `bio_*` 工具，逻辑与动态原型
-1:1。根目录 `index.js` 是入口再导出（profile 的 out-of-tree 解析按 `index.js` 找包）。
-
-挂载方式：把仓库 symlink 到 profile 的 node_modules 兜底层，再在 agent preset `bio-workbench` 里加一行
-`name: 'dsh-bio-workbench'`。已用 `standingKeyFor` 校验 **mounted OK**。
-
-```bash
-ln -sfn /path/to/dsh-bio-workbench "$HOME/.dsh/profiles/node_modules/dsh-bio-workbench"
-```
-
-重启 DSH 后，用 **Bio Workbench** 预设开新会话即可永久使用 `bio_*` 工具。
-
-### 剩余（可选）：浏览器工作台 UI 的静态化
-
-`src/index.ts`（`@Remote` 服务）+ `src/client.ts`（`ctx.remote` UI）是把「分析工作台」标签页也永久化的
-完整双面包，需要 Harness monorepo 的 tsdown + typert 生成器构建（步骤见 `BUILD.md`）。在此之前，
-浏览器 UI 继续由动态插件 `biowb-1`（`pkg-18`）提供。
+- Host 是单一事实来源：项目数据、manifest、provenance 都在磁盘（`~/bio-projects/<name>/`）。
+- Client 是纯投影：浏览器经同源 `fetch('/biowb/<method>')` 读写，Host 用 `webServer` 服务这些路由（不依赖 typert Remote 桥，因此不需要 Harness monorepo 构建）。
 
 ## License
 

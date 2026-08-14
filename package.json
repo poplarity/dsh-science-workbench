@@ -11,6 +11,7 @@
     "./package.json": "./package.json"
   },
   "files": [
+    "index.js",
     "lib/index.js",
     "lib/client.js",
     "skills",
@@ -26,7 +27,7 @@
     "agent"
   ],
   "scripts": {
-    "lint": "node --check host/index.js && node --check client/index.js"
+    "lint": "node --check lib/index.js"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
@@ -43,15 +44,5 @@
         "@deepseek-ai/dsh-client-ui-slots"
       ]
     }
-  },
-  "devDependencies": {
-    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6",
-    "@deepseek-ai/dsh-typert-generator": "^0.1.0-rc.6",
-    "@deepseek-ai/dsh-typert-protocol": "^0.1.0-rc.6",
-    "@types/node": "^26.2.0",
-    "@types/react": "^19.2.18",
-    "react": "^18.3.1",
-    "tsdown": "^0.22.14",
-    "typescript": "^7.0.2"
   }
 }
