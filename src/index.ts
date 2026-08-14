@@ -452,7 +452,7 @@ export class BioWorkbenchService extends TypertRemoteService {
   }
 
   @Remote("revealInFinder")
-  async revealInFinder(args?: { path?: string; isDir?: boolean }): Promise<{ ok: boolean; error?: string }> {
+  async revealInFinder(args?: { name?: string; path?: string; isDir?: boolean }): Promise<{ ok: boolean; error?: string }> {
     const root = await this.resolveProjectRoot(args)
     if (!root) return { ok: false, error: "no active project" }
     const p = String((args && args.path) || "")
@@ -740,7 +740,7 @@ export class BioWorkbenchService extends TypertRemoteService {
           name: { type: "string", description: "Optional project name to inspect." }
         },
         output: { schema: { type: "json" }, render: (_a: any, v: any) => [{ type: "text", text: JSON.stringify(v, null, 2) }] },
-        execute: (args: any) => this.getProject(args)
+        execute: (args: any) => this.getProject(args) as any
       })
     )
 
