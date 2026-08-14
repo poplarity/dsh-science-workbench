@@ -2,60 +2,141 @@
 
 English | [中文](README.zh.md)
 
-A reproducible science workbench plugin for the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness): Jupyter-style cells and inline figures, driven by an agent, with Nextflow/nf-core-grade provenance.
+[![npm version](https://img.shields.io/npm/v/dsh-science-workbench)](https://www.npmjs.com/package/dsh-science-workbench)
+[![license](https://img.shields.io/npm/l/dsh-science-workbench)](./LICENSE)
+[![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-plugin-8b5cf6)](https://github.com/deepseek-ai/deepseek-harness)
 
-> **Core promise**: every figure and artifact is traceable and replayable — you can answer "it = which code + which inputs + which environment + which params/seed", and re-run it in one click.
+A **reproducible science workbench** plugin for the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). It blends the best of three worlds:
 
-## Features
+- **Jupyter** — cells and inline figures you can see and re-run;
+- **Claude Science** — an agent as the execution engine;
+- **Nextflow / nf-core** — every artifact carries full provenance.
 
-- **Code → figure → feedback → redraw**: the agent runs a self-contained cell to produce figures shown inline; structured feedback is attached to each figure, and `bio_rerun_cell` produces a derived version (v1 → v2 → v3).
-- **Artifact management**: each project is a directory with a plain-text `manifest.json` ledger (cells + artifacts + provenance + feedback).
-- **Reproducible**: self-contained scripts + fresh subprocess + `environment.lock` + SHA-256 input/output hashes + fixed seed.
-- **Git versioned**: each project is auto `git init`-ed; every step is auto-committed locally (never pushed).
-- **Cross-platform**: the Host shell layer switches dialect per platform — bash on macOS/Linux, PowerShell on Windows; the Python interpreter auto-uses `python` on Windows and `python3` on POSIX.
+> **Core promise**: every figure and artifact is traceable and replayable. You can always answer *“it = which code + which inputs + which environment + which params/seed”*, and re-run it in one click.
 
-## Tools
+---
 
-Eight agent tools: `bio_init_project`, `bio_run_cell`, `bio_rerun_cell`, `bio_add_feedback`, `bio_get_project`, `bio_list_projects`, `bio_set_projects_dir`, `bio_delete_cell` — plus the "Analysis workbench" web tab (inline figures, feedback, provenance, delete cell).
+## ✨ Features
 
-## Install
+- **Code → figure → feedback → redraw** — the agent runs a self-contained cell to produce figures shown inline; you attach structured feedback to a figure, and `bio_rerun_cell` regenerates a derived version (`v1 → v2 → v3`).
+- **One ledger per project** — a plain-text `manifest.json` is the single source of truth: cells, artifacts, provenance and feedback history.
+- **Reproducible by construction** — self-contained scripts, a fresh subprocess per cell, `environment.lock`, SHA-256 input/output hashes and a fixed seed.
+- **Git-versioned automatically** — each project is `git init`-ed on creation and auto-committed at every step (never pushed).
+- **Cross-platform** — the Host shell layer speaks bash on macOS/Linux and PowerShell on Windows; Python resolves to `python` on Windows and `python3` on POSIX.
 
-This is a dual-face DSH plugin (Host + Client). Install it with the standard `dsh plugin` command — a thin pnpm forwarder that installs the package into a profile and automatically adds it to `dsh.profile.bundles` (because the package declares `dsh.bundle.patch`).
+## 🛠 Tools
+
+Eight agent-facing tools, plus a browser workbench:
+
+| Tool | What it does |
+|---|---|
+| `bio_init_project` | Create/open a project: `code/ data/ figures/` + `manifest.json` + `environment.lock` + `git init`. |
+| `bio_run_cell` | Run one self-contained cell, discover figures, register artifacts with hashes, commit. |
+| `bio_rerun_cell` | Re-run a cell with edited code as a derived version (lineage recorded). |
+| `bio_add_feedback` | Attach structured feedback to an artifact (this is how a “redraw it” note becomes history). |
+| `bio_get_project` | Return a project summary: cells, artifacts, provenance and feedback. |
+| `bio_list_projects` | List all projects under the projects root. |
+| `bio_set_projects_dir` | Set the root directory where projects live (persisted across restarts). |
+| `bio_delete_cell` | Delete a cell and its produced artifacts (script + figures). |
+
+The **“Analysis workbench”** tab shows the notebook, artifacts, provenance and feedback in a three-panel UI with inline figure preview (PNG/JPEG/SVG/PDF/TIFF/BMP).
+
+## 📦 Install
+
+`dsh-science-workbench` is a dual-face DSH plugin (Host + Client). Install it with the standard `dsh plugin` command — a thin pnpm forwarder that installs the package into a profile and **automatically adds it to `dsh.profile.bundles`** (because the package declares `dsh.bundle.patch`).
 
 ```bash
+# From npm (published):
+dsh plugin --profile web add dsh-science-workbench
+
 # Local development (from a checkout):
 dsh plugin --profile web add file:/path/to/dsh-science-workbench
-
-# From npm (once published):
-dsh plugin --profile web add dsh-science-workbench
 ```
 
-Then restart `dsh web`. The `bio_*` tools become globally available, the "Analysis workbench" tab appears, and the plugin shows up under Settings → Plugins.
+Then restart `dsh web`. The `bio_*` tools become globally available, the workbench tab appears, and the plugin shows up under **Settings → Plugins**.
 
-## Usage flow
+## 🚀 Quick start
 
-1. `bio_init_project` — create a project.
-2. `bio_run_cell` — run an analysis cell and write figures to `figures/`.
-3. Review the inline figure → `bio_add_feedback` to record → `bio_rerun_cell` to redraw with edits.
-4. Open the "Analysis workbench" tab for the notebook / artifacts / feedback view.
+After installing and restarting, just ask the agent in plain language:
 
-## Directory structure
+> “帮我用 `demo_tss` 项目画一个 TSS 附近的信号热图。”
 
-```
-lib/index.js         Host half: execution / manifest ledger / tools / HTTP data routes
-lib/client.js        Client half: workbench tab (browser bundle, fetches /biowb/*)
-index.js             entry re-export (profile out-of-tree resolution fallback)
-cordis.patch.yml     bundle patch (inserts the dsh-science-workbench row)
-skills/              convention skill
-docs/                design doc
-examples/            example analysis project
+The agent will drive the tools for you. The equivalent manual flow is:
+
+```text
+1. bio_init_project { name: "demo_tss" }
+2. bio_run_cell { title: "TSS profile", code: "..." }   # writes figures/*.png
+3. look at the inline figure → bio_add_feedback { artifactPath, text: "把配色改成 Blues" }
+4. bio_rerun_cell { cellId: "cell_0001", editedCode: "..." }  # → cell_0001_v2 + new figure
 ```
 
-## Data flow
+Every step is committed to the project’s git history and recorded in `manifest.json`, so the whole lineage (`cell_0001 → cell_0001_v2 → …`) stays inspectable.
 
-- The Host is the single source of truth: project data, manifest and provenance live on disk (`~/bio-projects/<name>/`).
-- The Client is a pure projection: the browser reads/writes over same-origin `fetch('/biowb/<method>')`, served by the Host through the `webServer` service — no typert Remote bridge, so no harness monorepo build is required.
+## 🧪 Reproducibility model
+
+Each cell is a **self-contained script** with a declaration header:
+
+```python
+# @cell: cell_0001
+# @title: TSS profile
+# @language: python
+# @seed: 42
+# @params: {"colorMap": "Blues"}
+# @inputs: ["data/peaks.bed"]
+# @outputs: []
+```
+
+It runs in a **fresh subprocess** with `cwd = project root`. On completion the Host:
+
+1. discovers figures written to `figures/` and prefixes them with the cell id;
+2. hashes every input and output (SHA-256) into the artifact record;
+3. appends the cell + artifacts to `manifest.json` and updates `index.md`;
+4. commits everything to the project’s local git repo.
+
+## 📁 Project layout
+
+```
+<workspace>/bio-projects/<name>/
+├─ manifest.json        # single source of truth: cells + artifacts + provenance + feedback
+├─ environment.lock     # interpreter version + pip freeze snapshot
+├─ index.md             # human-readable project index
+├─ code/                # one self-contained script per cell (cell_0001.py, cell_0001_v2.py, …)
+├─ data/                # input data
+├─ figures/             # figures (cell-prefixed, e.g. cell_0001_tss_profile.png)
+└─ .git/                # auto-created, auto-committed
+```
+
+## 🧩 Architecture
+
+- **Host** (`lib/index.js`) is the single source of truth. It registers the `bio_*` tools into the host `tools` registry, does all execution/provenance, and serves the `/biowb/*` data routes through the `webServer` service.
+- **Client** (`lib/client.js`) is a pure projection — a hand-written browser bundle that reads/writes over same-origin `fetch('/biowb/<method>')`. No typert Remote bridge and no harness monorepo build are required.
+- The **convention skill** (`skills/bio-workbench`) teaches the agent the project layout, the cell contract and the feedback loop.
+
+## 🌍 Cross-platform
+
+| Operation | macOS / Linux | Windows |
+|---|---|---|
+| Shell | bash | PowerShell |
+| Hash | `shasum -a 256` | `Get-FileHash` |
+| mkdir / move / delete | `mkdir -p` / `mv` / `rm -f` | `New-Item` / `Move-Item` / `Remove-Item` |
+| Open in file manager | `open` / `open -R` | `explorer.exe` / `explorer.exe /select,` |
+| Python | `python3` | `python` |
+
+## 🔧 Development
+
+```bash
+git clone https://github.com/poplarity/dsh-science-workbench
+cd dsh-science-workbench
+
+# lint (syntax check)
+npm run lint
+
+# install into your profile and restart
+dsh plugin --profile web add file:$(pwd)
+```
+
+Structure: `lib/index.js` (Host) · `lib/client.js` (Client bundle) · `index.js` (entry re-export) · `cordis.patch.yml` (bundle patch) · `skills/` (convention skill) · `docs/` (design doc) · `examples/` (example project).
 
 ## License
 
-MIT
+[MIT](./LICENSE)
