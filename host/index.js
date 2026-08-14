@@ -168,6 +168,13 @@ return {
 
     async function resolveProjectRoot(args) {
       await ensureProjectsRoot()
+      if (args && args.name) {
+        const nm = String(args.name)
+        if (nm && lastProject !== nm) {
+          lastProject = nm
+          await persistSettings()
+        }
+      }
       let root = null
       if (args && args.name) root = projectsRoot + '/' + String(args.name).replace(/[^A-Za-z0-9._-]/g, '_')
       else if (state.currentProject) root = state.currentProject.root
@@ -214,7 +221,7 @@ return {
 
     function guessKind(path) {
       const p = String(path).toLowerCase()
-      if (/\.(png|jpe?g|gif|webp|svg|pdf)$/.test(p)) return 'figure'
+      if (/\.(png|jpe?g|gif|webp|svg|pdf|tiff?|bmp)$/.test(p)) return 'figure'
       if (/\.(tsv|csv|bed|bedgraph|bw|bigwig|narrowpeak|bam|bai|txt|json)$/.test(p)) return 'data'
       return 'file'
     }
@@ -324,8 +331,20 @@ return {
       return { ok: true }
     }
 
+    function mimeFor(path) {
+      const p = String(path).toLowerCase()
+      if (p.endsWith('.png')) return 'image/png'
+      if (p.endsWith('.jpg') || p.endsWith('.jpeg')) return 'image/jpeg'
+      if (p.endsWith('.webp')) return 'image/webp'
+      if (p.endsWith('.gif')) return 'image/gif'
+      if (p.endsWith('.svg')) return 'image/svg+xml'
+      if (p.endsWith('.pdf')) return 'application/pdf'
+      if (p.endsWith('.tif') || p.endsWith('.tiff')) return 'image/tiff'
+      if (p.endsWith('.bmp')) return 'image/bmp'
+      return 'image/png'
+    }
+
     async function getProject(args) {
-      if (args && args.name) await setLastProject(String(args.name))
       const root = await resolveProjectRoot(args)
       if (!root) return { projects: await listProjects(), current: null }
 
@@ -335,14 +354,10 @@ return {
       const figures = []
       for (const art of manifest.artifacts || []) {
         if (art.kind !== 'figure') continue
-        let mime = 'image/png'
-        const p = art.path.toLowerCase()
-        if (p.endsWith('.jpg') || p.endsWith('.jpeg')) mime = 'image/jpeg'
-        else if (p.endsWith('.webp')) mime = 'image/webp'
-        else if (p.endsWith('.gif')) mime = 'image/gif'
-        else if (p.endsWith('.svg')) mime = 'image/svg+xml'
+        const mime = mimeFor(art.path)
+        const cap = mime === 'application/pdf' ? 10 * 1024 * 1024 : 4 * 1024 * 1024
         try {
-          const bytes = await readBytes(root + '/' + art.path, 3 * 1024 * 1024)
+          const bytes = await readBytes(root + '/' + art.path, cap)
           figures.push({ path: art.path, mime, base64: bytesToBase64(bytes), artifact: art })
         } catch (err) {
           figures.push({ path: art.path, mime, base64: null, artifact: art })
@@ -526,6 +541,27 @@ return {
       }
     }
 
+    async function deleteCell(args) {
+      const root = await resolveProjectRoot(args)
+      if (!root) throw new Error('no active project')
+      const manifest = await readManifest(root)
+      if (!manifest) throw new Error('manifest missing')
+      const idx = (manifest.cells || []).findIndex(function (c) { return c.id === args.cellId })
+      if (idx === -1) throw new Error('cell not found: ' + args.cellId)
+      const cell = manifest.cells[idx]
+      const artPaths = (cell.artifacts || []).slice()
+      manifest.artifacts = (manifest.artifacts || []).filter(function (a) { return artPaths.indexOf(a.path) === -1 })
+      await runShell('rm -f "' + root + '/' + cell.script + '"', workspaceRoot, 30000)
+      for (const ap of artPaths) {
+        if (ap.indexOf('figures/') === 0) await runShell('rm -f "' + root + '/' + ap + '"', workspaceRoot, 30000)
+      }
+      manifest.cells.splice(idx, 1)
+      await writeManifest(root, manifest)
+      await writeIndex(root, manifest)
+      await gitCommit(root, 'delete ' + cell.id)
+      return { ok: true, deletedCell: cell.id }
+    }
+
     harness.handle('getProject', function (args) { return getProject(args || {}) })
     harness.handle('listProjects', function () { return listProjects() })
     harness.handle('initProject', function (args) { return initProject(args || {}) })
@@ -544,6 +580,7 @@ return {
       const code = await readText(root + '/' + cell.script)
       return { cellId: cell.id, script: cell.script, code: code || '' }
     })
+    harness.handle('deleteCell', function (args) { return deleteCell(args || {}) })
 
     function registerTool(name, description, parameters, execute) {
       const tool = harness.defineTool({
@@ -619,5 +656,13 @@ return {
         editedCode: { type: 'string', required: true, description: 'The full replacement script body (header regenerated automatically).' }
       },
       function (args, exec) { return rerunCell(args, exec && exec.signal) })
+
+    registerTool('bio_delete_cell',
+      'Delete a cell and its produced artifacts (script and figures) from a project.',
+      {
+        name: { type: 'string', description: 'Optional project name.' },
+        cellId: { type: 'string', required: true, description: 'Id of the cell to delete (e.g. cell_0001).' }
+      },
+      function (args) { return deleteCell(args) })
   }
 }

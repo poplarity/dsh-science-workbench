@@ -9,7 +9,7 @@ return {
     const h = React.createElement
 
     styles.insert(`
-      .biowb { font-family: var(--dsw-font-family, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif); color: var(--dsw-alias-label-primary); line-height: 1.55; font-size: 13px; }
+      .biowb { font-family: var(--dsw-font-family, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif); color: var(--dsw-alias-label-primary); line-height: 1.55; font-size: 13px; padding: 4px 12px 8px; }
       .biowb * { box-sizing: border-box; }
       .biowb-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
       .biowb-title { font-size: 14px; font-weight: 600; }
@@ -22,6 +22,7 @@ return {
       .biowb-col-right { flex: 1 1 auto; min-width: 0; }
       @media (max-width: 720px) { .biowb-cols { flex-direction: column; } .biowb-col-left { flex: 1 1 auto; width: 100%; } }
       .biowb-fig { max-width: 100%; max-height: 640px; display: block; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; margin: 10px 0; cursor: zoom-in; }
+      .biowb-pdf { width: 100%; height: 560px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; margin: 10px 0; background: #fff; cursor: zoom-in; }
       .biowb-btn { cursor: pointer; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary); border-radius: 999px; padding: 6px 14px; font-size: 12px; font-weight: 500; line-height: 1.4; transition: background .12s ease, border-color .12s ease; }
       .biowb-btn:hover { background: var(--dsw-alias-interactive-bg-hover); border-color: var(--dsw-alias-border-l2); }
       .biowb-btn.primary { border-color: transparent; background: var(--dsw-alias-button-info-fill); color: #fff; }
@@ -51,6 +52,7 @@ return {
       .biowb-iconbtn:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
       .biowb-lb { position: fixed; inset: 0; background: rgba(0,0,0,.82); display: flex; align-items: center; justify-content: center; z-index: 9999; cursor: zoom-out; }
       .biowb-lb-img { max-width: 92vw; max-height: 92vh; border-radius: 12px; cursor: default; box-shadow: 0 8px 40px rgba(0,0,0,.5); }
+      .biowb-lb-pdf { width: 88vw; height: 88vh; border: none; border-radius: 12px; background: #fff; cursor: default; }
       .biowb-lb-close { position: fixed; top: 18px; right: 20px; background: rgba(255,255,255,.14); border: none; color: #fff; font-size: 20px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; }
     `)
 
@@ -129,18 +131,24 @@ return {
     }
 
     function Lightbox(props) {
-      if (!props.src) return null
+      if (!props.item) return null
+      const it = props.item
       return h('div', { className: 'biowb-lb', onClick: props.onClose },
-        h('img', { className: 'biowb-lb-img', src: props.src, alt: 'preview', onClick: function (e) { e.stopPropagation() } }),
+        it.mime === 'application/pdf'
+          ? h('iframe', { className: 'biowb-lb-pdf', src: it.src, title: 'preview', onClick: function (e) { e.stopPropagation() } })
+          : h('img', { className: 'biowb-lb-img', src: it.src, alt: 'preview', onClick: function (e) { e.stopPropagation() } }),
         h('button', { className: 'biowb-lb-close', onClick: props.onClose }, '✕')
       )
     }
 
     function FigureImage(props) {
       const f = props.figure
-      if (!f || !f.base64) return h('div', { className: 'biowb-muted' }, '(无图像数据)')
+      if (!f || !f.base64) return h('div', { className: 'biowb-muted' }, '(无预览)')
       const src = 'data:' + f.mime + ';base64,' + f.base64
-      return h('img', { className: 'biowb-fig', src: src, alt: f.path, onClick: function () { props.onZoom(src) } })
+      if (f.mime === 'application/pdf') {
+        return h('iframe', { className: 'biowb-pdf', src: src, title: f.path, onClick: function () { props.onZoom({ src: src, mime: f.mime }) } })
+      }
+      return h('img', { className: 'biowb-fig', src: src, alt: f.path, onClick: function () { props.onZoom({ src: src, mime: f.mime }) } })
     }
 
     function kv(label, value) {
@@ -251,6 +259,18 @@ return {
       )
     }
 
+    function DeleteCellButton(props) {
+      const [confirming, setConfirming] = React.useState(false)
+      if (!confirming) {
+        return h('button', { className: 'biowb-btn', onClick: function () { setConfirming(true) } }, '删除')
+      }
+      return h('div', { className: 'biowb-row' },
+        h('span', { className: 'biowb-muted' }, '删除该步骤及其产物？'),
+        h('button', { className: 'biowb-btn primary', onClick: function () { props.onDelete(); setConfirming(false) } }, '确定'),
+        h('button', { className: 'biowb-btn', onClick: function () { setConfirming(false) } }, '取消')
+      )
+    }
+
     function ProjectHeader(props) {
       const [showNew, setShowNew] = React.useState(false)
       const [showDir, setShowDir] = React.useState(false)
@@ -298,7 +318,7 @@ return {
       const cells = cur ? (cur.manifest.cells || []) : []
       const figures = cur ? (cur.figures || []) : []
       const [selectedCellId, setSelectedCellId] = React.useState(null)
-      const [lightboxSrc, setLightboxSrc] = React.useState(null)
+      const [lightbox, setLightbox] = React.useState(null)
 
       const effectiveCellId = selectedCellId && cells.some(function (c) { return c.id === selectedCellId })
         ? selectedCellId
@@ -310,7 +330,7 @@ return {
       if (p.error) return h('div', { className: 'biowb' }, h('div', { className: 'biowb-muted' }, '错误: ', p.error))
 
       return h('div', { className: 'biowb' },
-        h(Lightbox, { src: lightboxSrc, onClose: function () { setLightboxSrc(null) } }),
+        h(Lightbox, { item: lightbox, onClose: function () { setLightbox(null) } }),
 
         h(ProjectHeader, {
           projects: p.projects, selectedName: p.selectedName, select: p.select,
@@ -338,12 +358,13 @@ return {
                   h('span', { className: 'biowb-mono' }, selectedCell.id),
                   h('strong', null, selectedCell.title),
                   h('span', { className: 'biowb-spacer' }),
-                  h('button', { className: 'biowb-btn', onClick: function () { p.reveal(selectedCell.script, false) } }, '脚本')
+                  h('button', { className: 'biowb-btn', onClick: function () { p.reveal(selectedCell.script, false) } }, '脚本'),
+                  h(DeleteCellButton, { onDelete: function () { p.call('deleteCell', { cellId: selectedCell.id }).then(function () { setSelectedCellId(null); p.refresh() }) } })
                 ),
                 (selectedCell.artifacts && selectedCell.artifacts.length)
                   ? selectedCell.artifacts.map(function (ap) {
                       const art = (cur.manifest.artifacts || []).find(function (a) { return a.path === ap })
-                      return art ? h(ArtifactDetail, { key: ap, artifact: art, figures: figures, call: p.call, inputActions: props.inputActions, onChanged: p.refresh, reveal: p.reveal, onZoom: setLightboxSrc }) : null
+                      return art ? h(ArtifactDetail, { key: ap, artifact: art, figures: figures, call: p.call, inputActions: props.inputActions, onChanged: p.refresh, reveal: p.reveal, onZoom: setLightbox }) : null
                     })
                   : h('div', { className: 'biowb-muted' }, '该步骤暂无产物。')
               ) : h('div', { className: 'biowb-muted' }, '选择左侧步骤查看详情。')
@@ -358,14 +379,14 @@ return {
       const p = useProject()
       const cur = p.data && p.data.current
       const figures = cur && cur.figures ? cur.figures.slice().reverse() : []
-      const [lightboxSrc, setLightboxSrc] = React.useState(null)
+      const [lightbox, setLightbox] = React.useState(null)
 
       return h('div', { className: 'biowb' },
-        h(Lightbox, { src: lightboxSrc, onClose: function () { setLightboxSrc(null) } }),
+        h(Lightbox, { item: lightbox, onClose: function () { setLightbox(null) } }),
         p.error ? h('div', { className: 'biowb-muted' }, '错误: ', p.error) : null,
         figures.length === 0 ? h('div', { className: 'biowb-muted' }, '（暂无图 — 用 bio_run_cell 出图后在此内联显示）') : null,
         figures.map(function (f) {
-          return h(ArtifactDetail, { key: f.path, artifact: f.artifact, figures: figures, call: p.call, inputActions: props.inputActions, onChanged: p.refresh, reveal: p.reveal, onZoom: setLightboxSrc })
+          return h(ArtifactDetail, { key: f.path, artifact: f.artifact, figures: figures, call: p.call, inputActions: props.inputActions, onChanged: p.refresh, reveal: p.reveal, onZoom: setLightbox })
         })
       )
     }
