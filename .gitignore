@@ -1,0 +1,8 @@
+node_modules/
+.DS_Store
+*.log
+__pycache__/
+*.pyc
+bio-projects/
+examples/*/figures/
+examples/*/data/
