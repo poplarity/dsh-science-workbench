@@ -21,6 +21,33 @@ return {
 
     const state = { currentProject: null }
 
+    // --- Cross-platform shell layer -------------------------------------
+    // The Host `shell` service is bash on macOS/Linux and PowerShell on
+    // Windows (the deployment disables bash-sandbox on win32 and mounts
+    // pwsh-sandbox instead). Detect the platform from the workspace root's
+    // path shape (drive letter, or a backslash separator) and emit the
+    // matching command dialect. Python is `python3` on POSIX but `python`
+    // on Windows. `BS` is a literal backslash, built without a backslash
+    // source escape so the source stays copy-safe.
+    const BS = String.fromCharCode(92)
+    const rootStr = String(workspaceRoot || '')
+    const IS_WIN = /^[A-Za-z]:/.test(rootStr) || rootStr.indexOf(BS) !== -1
+    const IS_MAC = !IS_WIN && rootStr.indexOf('/Users/') === 0
+    const PY = IS_WIN ? 'python' : 'python3'
+
+    function shq(p) {
+      return '"' + String(p).replace(/"/g, "'") + '"'
+    }
+
+    function winPath(p) {
+      return String(p).split('/').join(BS)
+    }
+
+    // Quote a filesystem path, normalising separators for PowerShell.
+    function shqp(p) {
+      return shq(IS_WIN ? winPath(p) : p)
+    }
+
     async function readText(path) {
       try {
         return await fs.readText(await fs.resolve(path))
@@ -84,22 +111,34 @@ return {
     }
 
     async function sha256File(absPath) {
-      const r = await runShell('shasum -a 256 "' + absPath + '" 2>/dev/null', workspaceRoot, 30000)
+      const cmd = IS_WIN
+        ? 'Get-FileHash -Algorithm SHA256 -LiteralPath ' + shqp(absPath) + ' -ErrorAction SilentlyContinue | ForEach-Object { $_.Hash.ToLower() }'
+        : 'shasum -a 256 ' + shqp(absPath) + ' 2>/dev/null'
+      const r = await runShell(cmd, workspaceRoot, 30000)
       const out = String(r.stdout.text || '').trim()
-      const m = out.match(/\b([0-9a-f]{64})\b/)
-      return m ? m[1] : null
+      const m = out.match(/\b([0-9a-f]{64})\b/i)
+      return m ? m[1].toLowerCase() : null
     }
 
     async function mkdirs(root) {
-      await runShell('mkdir -p "' + root + '/code" "' + root + '/data" "' + root + '/figures"', workspaceRoot, 30000)
+      const cmd = IS_WIN
+        ? 'New-Item -ItemType Directory -Force -Path ' + shqp(root + '/code') + ',' + shqp(root + '/data') + ',' + shqp(root + '/figures') + ' | Out-Null'
+        : 'mkdir -p ' + shqp(root + '/code') + ' ' + shqp(root + '/data') + ' ' + shqp(root + '/figures')
+      await runShell(cmd, workspaceRoot, 30000)
     }
 
     async function gitCommit(root, message) {
-      await runShell('git add -A >/dev/null 2>&1; git commit -m "' + String(message).replace(/"/g, '\\"') + '" >/dev/null 2>&1 || true', root, 30000)
+      const cmd = IS_WIN
+        ? 'git add -A 2>$null; git commit -m ' + shq(message) + ' 2>$null'
+        : 'git add -A >/dev/null 2>&1; git commit -m ' + shq(message) + ' >/dev/null 2>&1 || true'
+      await runShell(cmd, root, 30000)
     }
 
     async function gitInit(root) {
-      await runShell('git init -q 2>/dev/null; git config user.email "bio-workbench@local" 2>/dev/null; git config user.name "bio-workbench" 2>/dev/null', root, 30000)
+      const cmd = IS_WIN
+        ? 'git init -q 2>$null; git config user.email "bio-workbench@local" 2>$null; git config user.name "bio-workbench" 2>$null'
+        : 'git init -q 2>/dev/null; git config user.email "bio-workbench@local" 2>/dev/null; git config user.name "bio-workbench" 2>/dev/null'
+      await runShell(cmd, root, 30000)
     }
 
     async function ensureProjectsRoot() {
@@ -192,14 +231,15 @@ return {
     async function snapshotEnvironment(root, language) {
       language = language === 'R' ? 'R' : 'python'
       if (language === 'python') {
-        const py = await runShell('python3 -c "import sys; print(sys.version.split()[0])" 2>/dev/null', root, 30000)
-        const interpreter = String(py.stdout.text || '').trim() || 'python3'
-        const pkgs = await runShell('python3 -m pip freeze 2>/dev/null || true', root, 60000)
+        const verCmd = PY + ' -c "import sys; print(sys.version.split()[0])"' + (IS_WIN ? ' 2>$null' : ' 2>/dev/null')
+        const py = await runShell(verCmd, root, 30000)
+        const interpreter = String(py.stdout.text || '').trim() || PY
+        const pkgs = await runShell(PY + ' -m pip freeze' + (IS_WIN ? ' 2>$null' : ' 2>/dev/null || true'), root, 60000)
         const lock = '# dsh-bio-workbench environment lock\n# interpreter: ' + interpreter + '\n# generated: ' + new Date().toISOString() + '\n\n' + String(pkgs.stdout.text || '')
         await writeText(root + '/environment.lock', lock)
         return { language, interpreter, lockFile: 'environment.lock' }
       } else {
-        const r = await runShell('Rscript -e "cat(as.character(getRversion()))" 2>/dev/null', root, 30000)
+        const r = await runShell('Rscript -e "cat(as.character(getRversion()))"' + (IS_WIN ? ' 2>$null' : ' 2>/dev/null'), root, 30000)
         const interpreter = 'R ' + String(r.stdout.text || '').trim()
         await writeText(root + '/environment.lock', '# dsh-bio-workbench environment lock\n# interpreter: ' + interpreter + '\n')
         return { language, interpreter: interpreter || 'R', lockFile: 'environment.lock' }
@@ -248,7 +288,9 @@ return {
           continue
         }
         const newRel = 'figures/' + cellId + '_' + base
-        await runShell('mv "' + root + '/' + rel + '" "' + root + '/' + newRel + '"', workspaceRoot, 30000)
+        await runShell(IS_WIN
+          ? 'Move-Item -Force -LiteralPath ' + shqp(root + '/' + rel) + ' -Destination ' + shqp(root + '/' + newRel)
+          : 'mv ' + shqp(root + '/' + rel) + ' ' + shqp(root + '/' + newRel), workspaceRoot, 30000)
         renamed.push(newRel)
       }
       return renamed
@@ -325,9 +367,19 @@ return {
       const root = await resolveProjectRoot(args)
       if (!root) return { ok: false, error: 'no active project' }
       const p = String(args.path || '')
-      const abs = p.charAt(0) === '/' ? p : (root + '/' + p)
-      if (args.isDir === true) await runShell('open "' + abs + '"', workspaceRoot, 30000)
-      else await runShell('open -R "' + abs + '"', workspaceRoot, 30000)
+      const isAbs = p.charAt(0) === '/' || /^[A-Za-z]:/.test(p)
+      const abs = isAbs ? p : (root + '/' + p)
+      let cmd
+      if (IS_WIN) {
+        cmd = args.isDir === true
+          ? 'explorer.exe ' + shqp(abs)
+          : 'explorer.exe /select,' + shqp(abs)
+      } else if (IS_MAC) {
+        cmd = args.isDir === true ? 'open ' + shqp(abs) : 'open -R ' + shqp(abs)
+      } else {
+        cmd = 'xdg-open ' + shqp(abs)
+      }
+      await runShell(cmd, workspaceRoot, 30000)
       return { ok: true }
     }
 
@@ -366,6 +418,7 @@ return {
 
       return {
         projects: await listProjects(),
+        platform: IS_WIN ? 'win32' : (IS_MAC ? 'darwin' : 'linux'),
         current: { name: manifest.name, root: manifest.root, manifest, figures }
       }
     }
@@ -392,7 +445,7 @@ return {
       await writeText(root + '/' + scriptRel, scriptBody)
 
       const before = await hashFigures(root)
-      const cmd = language === 'R' ? ('Rscript ' + scriptRel) : ('python3 ' + scriptRel)
+      const cmd = language === 'R' ? ('Rscript ' + shqp(scriptRel)) : (PY + ' ' + shqp(scriptRel))
       const result = await runShell(cmd, root, 300000, signal)
       const status = result.exitCode === 0 ? 'ok' : 'error'
 
@@ -494,7 +547,7 @@ return {
       await writeText(root + '/' + scriptRel, scriptBody)
 
       const before = await hashFigures(root)
-      const cmd = language === 'R' ? ('Rscript ' + scriptRel) : ('python3 ' + scriptRel)
+      const cmd = language === 'R' ? ('Rscript ' + shqp(scriptRel)) : (PY + ' ' + shqp(scriptRel))
       const result = await runShell(cmd, root, 300000, signal)
       const status = result.exitCode === 0 ? 'ok' : 'error'
 
@@ -551,9 +604,13 @@ return {
       const cell = manifest.cells[idx]
       const artPaths = (cell.artifacts || []).slice()
       manifest.artifacts = (manifest.artifacts || []).filter(function (a) { return artPaths.indexOf(a.path) === -1 })
-      await runShell('rm -f "' + root + '/' + cell.script + '"', workspaceRoot, 30000)
+      await runShell(IS_WIN
+        ? 'Remove-Item -Force -LiteralPath ' + shqp(root + '/' + cell.script) + ' -ErrorAction SilentlyContinue'
+        : 'rm -f ' + shqp(root + '/' + cell.script), workspaceRoot, 30000)
       for (const ap of artPaths) {
-        if (ap.indexOf('figures/') === 0) await runShell('rm -f "' + root + '/' + ap + '"', workspaceRoot, 30000)
+        if (ap.indexOf('figures/') === 0) await runShell(IS_WIN
+          ? 'Remove-Item -Force -LiteralPath ' + shqp(root + '/' + ap) + ' -ErrorAction SilentlyContinue'
+          : 'rm -f ' + shqp(root + '/' + ap), workspaceRoot, 30000)
       }
       manifest.cells.splice(idx, 1)
       await writeManifest(root, manifest)

@@ -232,7 +232,7 @@ return {
           h('span', { className: 'biowb-tag kind' }, art.kind),
           h('span', { className: 'biowb-muted' }, 'by ' + art.producedBy),
           h('span', { className: 'biowb-spacer' }),
-          h('button', { className: 'biowb-btn', onClick: function () { props.reveal(art.path, false) } }, '📁 Finder')
+          h('button', { className: 'biowb-btn', onClick: function () { props.reveal(art.path, false) } }, '📁 ' + (props.fmLabel || 'Finder'))
         ),
         fig ? h(FigureImage, { figure: fig, onZoom: props.onZoom }) : null,
         h('div', { className: 'biowb-row', style: { marginTop: 6 } },
@@ -298,7 +298,7 @@ return {
           h('button', { className: 'biowb-btn', onClick: function () { setShowNew(!showNew); setShowDir(false) } }, showNew ? '取消' : '＋ 新建'),
           h('span', { className: 'biowb-spacer' }),
           h('button', { className: 'biowb-iconbtn', title: '设置存储目录', onClick: function () { setShowDir(!showDir); setShowNew(false) } }, '⚙'),
-          h('button', { className: 'biowb-iconbtn', title: '在 Finder 打开项目目录', onClick: function () { props.reveal('', true) } }, '📁'),
+          h('button', { className: 'biowb-iconbtn', title: '在' + (props.fmLabel || 'Finder') + '打开项目目录', onClick: function () { props.reveal('', true) } }, '📁'),
           h('button', { className: 'biowb-iconbtn', title: '刷新', onClick: props.refresh }, props.loading ? '…' : '↻')
         ),
         showNew ? h('div', { className: 'biowb-row', style: { marginBottom: 12 } },
@@ -319,6 +319,7 @@ return {
       const figures = cur ? (cur.figures || []) : []
       const [selectedCellId, setSelectedCellId] = React.useState(null)
       const [lightbox, setLightbox] = React.useState(null)
+      const fmLabel = (p.data && p.data.platform === 'win32') ? '资源管理器' : 'Finder'
 
       const effectiveCellId = selectedCellId && cells.some(function (c) { return c.id === selectedCellId })
         ? selectedCellId
@@ -335,7 +336,7 @@ return {
         h(ProjectHeader, {
           projects: p.projects, selectedName: p.selectedName, select: p.select,
           createProject: p.createProject, setDir: p.setDir, reveal: p.reveal,
-          refresh: p.refresh, loading: p.loading
+          refresh: p.refresh, loading: p.loading, fmLabel: fmLabel
         }),
 
         p.projects.length === 0 ? h('div', { className: 'biowb-section' },
@@ -364,7 +365,7 @@ return {
                 (selectedCell.artifacts && selectedCell.artifacts.length)
                   ? selectedCell.artifacts.map(function (ap) {
                       const art = (cur.manifest.artifacts || []).find(function (a) { return a.path === ap })
-                      return art ? h(ArtifactDetail, { key: ap, artifact: art, figures: figures, call: p.call, inputActions: props.inputActions, onChanged: p.refresh, reveal: p.reveal, onZoom: setLightbox }) : null
+                      return art ? h(ArtifactDetail, { key: ap, artifact: art, figures: figures, call: p.call, inputActions: props.inputActions, onChanged: p.refresh, reveal: p.reveal, onZoom: setLightbox, fmLabel: fmLabel }) : null
                     })
                   : h('div', { className: 'biowb-muted' }, '该步骤暂无产物。')
               ) : h('div', { className: 'biowb-muted' }, '选择左侧步骤查看详情。')
@@ -380,13 +381,14 @@ return {
       const cur = p.data && p.data.current
       const figures = cur && cur.figures ? cur.figures.slice().reverse() : []
       const [lightbox, setLightbox] = React.useState(null)
+      const fmLabel = (p.data && p.data.platform === 'win32') ? '资源管理器' : 'Finder'
 
       return h('div', { className: 'biowb' },
         h(Lightbox, { item: lightbox, onClose: function () { setLightbox(null) } }),
         p.error ? h('div', { className: 'biowb-muted' }, '错误: ', p.error) : null,
         figures.length === 0 ? h('div', { className: 'biowb-muted' }, '（暂无图 — 用 bio_run_cell 出图后在此内联显示）') : null,
         figures.map(function (f) {
-          return h(ArtifactDetail, { key: f.path, artifact: f.artifact, figures: figures, call: p.call, inputActions: props.inputActions, onChanged: p.refresh, reveal: p.reveal, onZoom: setLightbox })
+          return h(ArtifactDetail, { key: f.path, artifact: f.artifact, figures: figures, call: p.call, inputActions: props.inputActions, onChanged: p.refresh, reveal: p.reveal, onZoom: setLightbox, fmLabel: fmLabel })
         })
       )
     }
