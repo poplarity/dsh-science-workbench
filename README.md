@@ -51,6 +51,14 @@ The **feedback → redraw loop** — every figure keeps its structured feedback 
 
 ![Feedback and redraw loop](assets/workbench-feedback.png)
 
+The **code** tab — every artifact’s generating script carries its declaration header (cell / title / language / seed / params / inputs), so it can be reviewed and reused at any time.
+
+![Code tab](assets/workbench-code.png)
+
+The **provenance** tab — full provenance: producing cell, output SHA-256 hash, params, seed, derived-from and created time.
+
+![Provenance tab](assets/workbench-provenance.png)
+
 ## 📦 Install
 
 `dsh-science-workbench` is a dual-face DSH plugin (Host + Client). Install it with the standard `dsh plugin` command — a thin pnpm forwarder that installs the package into a profile and **automatically adds it to `dsh.profile.bundles`** (because the package declares `dsh.bundle.patch`).

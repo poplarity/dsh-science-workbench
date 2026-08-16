@@ -51,6 +51,14 @@
 
 ![反馈与重画回路](assets/workbench-feedback.png)
 
+「代码」标签 —— 每个产物的生成脚本带声明头（cell / title / language / seed / params / inputs），可随时查看与复用。
+
+![代码标签](assets/workbench-code.png)
+
+「溯源」标签 —— 完整 provenance：产出 cell、输出 SHA-256 哈希、参数、seed、派生自、创建时间。
+
+![溯源标签](assets/workbench-provenance.png)
+
 ## 📦 安装
 
 `dsh-science-workbench` 是一个 DSH 双面包（Host + Client）。用标准 `dsh plugin` 命令安装 —— 它是对 pnpm 的薄封装，把包装进 profile 并**自动加进 `dsh.profile.bundles`**（因为本包声明了 `dsh.bundle.patch`）。
