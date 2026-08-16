@@ -41,6 +41,16 @@
 
 **「分析工作台」** 标签页用三栏 UI 展示 notebook、产物、溯源与反馈，支持内联图预览（PNG/JPEG/SVG/PDF/TIFF/BMP）。
 
+## 📸 截图
+
+工作台标签页 —— 三栏布局：左侧「分析步骤」列表（含状态与派生链路 `cell_0001 → cell_0001_v2 → cell_0001_v3`），右侧「产物详情」（内联图 + 溯源/代码标签 + 脚本/删除/Finder 操作）。
+
+![分析工作台总览](assets/workbench-overview.png)
+
+反馈 → 重画回路 —— 每张图保留结构化反馈历史，一键「让 agent 重画」生成派生版本。
+
+![反馈与重画回路](assets/workbench-feedback.png)
+
 ## 📦 安装
 
 `dsh-science-workbench` 是一个 DSH 双面包（Host + Client）。用标准 `dsh plugin` 命令安装 —— 它是对 pnpm 的薄封装，把包装进 profile 并**自动加进 `dsh.profile.bundles`**（因为本包声明了 `dsh.bundle.patch`）。

@@ -41,6 +41,16 @@ Eight agent-facing tools, plus a browser workbench:
 
 The **“Analysis workbench”** tab shows the notebook, artifacts, provenance and feedback in a three-panel UI with inline figure preview (PNG/JPEG/SVG/PDF/TIFF/BMP).
 
+## 📸 Screenshots
+
+The workbench tab — a three-panel layout: the **analysis steps** list (with status and lineage `cell_0001 → cell_0001_v2 → cell_0001_v3`) on the left, and the **artifact detail** (inline figure + provenance / code tabs + script / delete / Finder actions) on the right.
+
+![Analysis workbench overview](assets/workbench-overview.png)
+
+The **feedback → redraw loop** — every figure keeps its structured feedback history, and a one-click “让 agent 重画” (let the agent redraw) produces a derived version.
+
+![Feedback and redraw loop](assets/workbench-feedback.png)
+
 ## 📦 Install
 
 `dsh-science-workbench` is a dual-face DSH plugin (Host + Client). Install it with the standard `dsh plugin` command — a thin pnpm forwarder that installs the package into a profile and **automatically adds it to `dsh.profile.bundles`** (because the package declares `dsh.bundle.patch`).
