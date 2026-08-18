@@ -38,8 +38,9 @@
 | `bio_list_projects` | 列出 projects 根目录下的所有项目。 |
 | `bio_set_projects_dir` | 设置项目存储根目录（跨重启持久化）。 |
 | `bio_delete_cell` | 删除一个 cell 及其产物（脚本 + 图）。 |
+| `bio_mark_cell` | 标记 cell 为「成品」，或取消标记 —— 工作台与索引中会显示成品徽标。 |
 
-**「分析工作台」** 标签页用三栏 UI 展示 notebook、产物、溯源与反馈，支持内联图预览（PNG/JPEG/SVG/PDF/TIFF/BMP）。
+**「分析工作台」** 标签页用三栏 UI 展示 notebook、产物、溯源与反馈，支持内联图预览（PNG/JPEG/SVG/PDF/TIFF/BMP）、**cell 检索框**、**系统原生目录选择器**（设置项目根目录）与**成品标记**徽标。
 
 插件还内置两个**出版级出图 skill**（改编自 Claude Science，Apache-2.0）：`figure-style`（图形正确性与易读性规则 + `apply_figure_style()`）与 `figure-composer`（多面板组合图 + 对抗式自审循环）。见 `skills/` 与 [ATTRIBUTIONS.md](./ATTRIBUTIONS.md)。
 

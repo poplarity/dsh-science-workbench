@@ -6,6 +6,7 @@
 - 工作台：支持**标记 cell 为「成品」** —— 新增 `bio_mark_cell` 工具 + UI「标记成品/取消成品」按钮 + 步骤列表与详情中的「成品」徽标。
 - 工作台：支持**检索 cell** —— 步骤列表顶部搜索框，按 id / 标题 / 状态过滤。
 - 工作台：无项目时显示**第一步引导「设置工作目录」**。
+- 内置两个**出版级出图 skill**（改编自 Claude Science，Apache-2.0）：`figure-style`（图形规范 + `apply_figure_style()`）+ `figure-composer`（多面板组合图 + 对抗式自审循环），见 `ATTRIBUTIONS.md`。
 
 ## 0.1.1
 
