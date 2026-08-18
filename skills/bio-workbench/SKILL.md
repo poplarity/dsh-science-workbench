@@ -73,13 +73,23 @@ description: 生信分析工作台（dsh-science-workbench）的可复现分析�
 | `bio_rerun_cell` | 带编辑代码重跑，生成派生版本 |
 | `bio_add_feedback` | 记录结构化反馈到 artifact |
 | `bio_get_project` / `bio_list_projects` | 查账本 |
+| `bio_set_projects_dir` | 设置/迁移项目根目录（Windows 盘符路径亦支持） |
+| `bio_delete_cell` | 删除 cell 及其产物（脚本 + 图） |
+| `bio_mark_cell` | 标记/取消标记 cell 为「成品」（`final` 徽标） |
 
-## 6. 可复现性三条铁律
+## 6. 出图质量（内置 figure skills）
+
+工作台内置两个**出版级出图 skill**（改编自 Claude Science，Apache-2.0）：出图时优先加载
+`figure-style`（正确性/易读性规则 + `apply_figure_style()`），需要多面板组合图时加载
+`figure-composer`（outline → 逐面板渲染 → 拼图 → 对抗式自审循环 ≤3 轮）。kernel 助手
+（`kernel.py`）与各 SKILL.md 同目录，按其中说明复制进项目 `code/` 即可在 cell 中 `exec` 使用。
+
+## 7. 可复现性三条铁律
 
 1. **脚本自包含**：cell 显式声明 inputs/outputs，全新子进程运行，不依赖热内核状态。
 2. **环境锁定**：项目用 `environment.lock` 记录 interpreter + 包版本；重放 = 同一 lock + 同一代码 + 同一输入 + 同一 seed。
 3. **双证据**：manifest 存 provenance，git 存时间线；两者互相印证，缺一不可。
 
-## 7. 视觉自检 Tier 1（可插拔，需视觉模型）
+## 8. 视觉自检 Tier 1（可插拔，需视觉模型）
 
 若配置了视觉模型 endpoint（Qwen-VL / GLM-4V / GPT-4o / Claude / 本地 Ollama），可在出图后调用它审图，检查：标签重叠、图例缺失/冲突、字体过小、坐标轴单位、色盲配色、dpi 不足、统计标注位置。发现机械问题先自改一轮再给用户看。**没有视觉模型时不做，Tier 0 + 人审足够。**

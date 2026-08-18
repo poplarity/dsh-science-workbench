@@ -47,26 +47,34 @@
    └─ <project>/code/ data/ figures/ manifest.json environment.lock .git/
 ```
 
-## 四、目录结构（本仓库）
+## 四、目录结构（本仓库，v0.2.0）
 
 ```
 dsh-science-workbench/
-├─ host/index.js        # Host 半（Node 进程：执行/账本/工具）
-├─ client/index.js      # Client 半（浏览器：图卡片 + 工作台 tab）
-├─ skills/bio-workbench/SKILL.md
+├─ lib/index.js        # Host 半（静态 ESM：执行/账本/工具/HTTP 数据路由）
+├─ lib/client.js       # Client 半（浏览器 bundle：工作台 tab + 检索 + 目录选择器 + 成品标记）
+├─ index.js            # 入口再导出（profile out-of-tree 解析兜底）
+├─ cordis.patch.yml    # bundle 补丁（插入 dsh-science-workbench 行）
+├─ skills/
+│  ├─ bio-workbench/SKILL.md      # 工作台约定 skill
+│  ├─ figure-style/               # 出版级出图规范（改编自 Claude Science，Apache-2.0）
+│  └─ figure-composer/            # 多面板组合图 + 对抗式自审（改编自 Claude Science，Apache-2.0）
+├─ assets/             # README 功能展示截图
 ├─ docs/design.md
-├─ examples/            # 示例分析项目
-└─ package.json README.md LICENSE
+├─ examples/           # 示例分析项目
+├─ ATTRIBUTIONS.md     # 第三方（Claude Science skills）归属说明
+└─ package.json README.md README.zh.md LICENSE CHANGELOG.md
 ```
 
-## 五、后端契约要点（已用 inspect 确认）
+## 五、后端契约要点（v0.2.0，静态双面包）
 
-- **执行**：`ctx.get('shell')` → `resolve({command, workdir, timeoutMs, stdoutMaxBytes, signal})` → `run(spec)` → `ShellRunResult{exitCode, stdout.text, stderr.text}`。
-- **文件**：`ctx.get('fs')` → `resolve(path)` → `readText`/`writeText`/`listDir`/`readBytes`；`writeText` 无 expected 即无条件覆盖；目录创建用 shell `mkdir -p`（fs 无 mkdir）。
-- **工具**：`harness.defineTool({name, description, parameters, output:{schema,render}, execute})` + `harness.registerTool(ctx, tool)`。
-- **RPC**：`harness.handle(method, fn)` ↔ Client `host.call(method, args)`。
-- **哈希**：无 crypto 内建 → 用 shell `shasum -a 256`。
-- **图传递**：Host `fs.readBytes` → base64（`btoa`）→ Client 渲染 `data:` URL。
+- **执行**：`ctx.get('shell')` → `resolve({command, workdir, timeoutMs, stdoutMaxBytes, signal, sandboxPolicy})` → `run(spec)` → `ShellRunResult{exitCode, stdout.text, stderr.text}`。Windows 上该服务为 PowerShell（pwsh-sandbox），macOS/Linux 为 bash。
+- **文件**：`ctx.get('fs')` → `resolve(path)` → `readText`/`writeText`/`listDir`/`readBytes`；`writeText` 无 expected 即无条件覆盖；目录创建用 shell 命令。
+- **工具**：`defineTool`（`@deepseek-ai/dsh-tools`）+ `ctx.tools.register`（Host 全局注册 `bio_*` 工具）。
+- **Client 数据**：浏览器经同源 `fetch('/biowb/<method>')`，Host 用 `webServer` 服务这些路由（**无 typert Remote 桥、无需 monorepo 构建**）。
+- **哈希**：无 crypto 内建 → macOS/Linux 用 shell `shasum -a 256`，Windows 用 `Get-FileHash`。
+- **图传递**：Host `fs.readBytes` → 手写 base64 → Client 渲染 `data:` URL。
+- **沙箱**：当前 `runShell` 硬编码 `danger-full-access`（绕过 macOS sandbox-exec 问题的占位，见 §七 TODO）。
 
 ## 六、MVP 构建顺序
 
@@ -77,25 +85,32 @@ dsh-science-workbench/
 5. 持久配套 skill
 6. 真实小例验证闭环（peaks → TSS profile → 反馈改图 → 派生 v2 → 溯源）
 
-## 七、后续（Phase 2）
+## 七、后续（Phase 2 进展）
 
-- 静态插件包 + 组合挂载（`editing-cordis-compositions`）永久化
-- 集群执行（对接现有 chipseq-cluster / cluster-ssh）
+✅ 已完成：
+- **静态插件包 + 组合挂载永久化**（v0.1.0+）：`dsh.bundle.patch` + `dsh.client` 双面包，`dsh plugin add dsh-science-workbench` 安装，重启不丢、全局可用。
+- **Windows 适配**（v0.1.1）：PowerShell 命令方言、`python`↔`python3`、盘符路径支持、`explorer` 定位。
+- **内置出版级出图 skill**（v0.2.0）：figure-style + figure-composer（Apache-2.0 归属见 ATTRIBUTIONS.md）。
+- **工作台增强**（v0.2.0）：原生目录选择器、cell 检索、`bio_mark_cell` 成品标记、首步引导。
+
+⏳ 待办：
+- 集群执行（对接现有 chipseq-cluster / cluster-ssh / remote-compute-ssh）
 - 缓存复用 + 依赖图失效判定
 - Tier 1 视觉 reviewer 实装（配置视觉模型 endpoint）
 - 导出容器配方（Dockerfile / Apptainer def）
-- **uv.lock / renv 精确环境锁定**（原型当前用 `pip freeze` 快照 + `python3` 硬编码）
-- **沙箱策略正确解析**（原型为绕过 macOS `sandbox-exec` 的 scrubbed-PATH/cwd ENOENT，在 `runShell` 里硬编码 `danger-full-access`；Phase 2 改为解析会话真实模式）
-- **workspace root 解析**（原型用 `sandboxPolicy.workspaceRoot` = DSH 启动 cwd，项目落到了 `~/bio-projects/` 而非会话工作区下；Phase 2 对齐会话 workspace）
+- **uv.lock / renv 精确环境锁定**（当前用 `pip freeze` 快照）
+- **沙箱策略正确解析**（`runShell` 仍硬编码 `danger-full-access`，因工作台写可配置项目根 + 跑子进程；应改为解析会话真实模式）
+- **workspace root 解析**（项目默认落在 `~/bio-projects/`；Phase 2 对齐会话 workspace）
 
-## 八、原型验证结论（已跑通）
+## 八、验证结论（已跑通）
 
-用真实小例 `demo_tss` 跑通完整闭环，双证据（manifest + git）成立：
+用真实小例 `demo_tss` / `rad21_peak_heatmap` 跑通完整闭环，双证据（manifest + git）成立：
 
 ```
 bio_init_project → 建目录 + manifest.json + environment.lock + git init
 bio_run_cell     → cell_0001 + figures/tss_profile.png（SHA-256 ee5d99c4…）
 bio_add_feedback → 反馈挂 figures/tss_profile.png（git: 186d033）
 bio_rerun_cell   → cell_0001_v2 + figures/tss_profile_v2.png（derivedFrom 链，git: a9b9975）
+bio_mark_cell    → cell_0001_v3 标记「成品」（v0.2.0）
 bio_get_project  → 完整 provenance 可查（cells/artifacts/feedback/derivedFrom/哈希）
 ```

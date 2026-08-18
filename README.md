@@ -26,7 +26,7 @@ A **reproducible science workbench** plugin for the [DeepSeek Harness](https://g
 
 ## 🛠 Tools
 
-Eight agent-facing tools, plus a browser workbench:
+Nine agent-facing tools, plus a browser workbench:
 
 | Tool | What it does |
 |---|---|
