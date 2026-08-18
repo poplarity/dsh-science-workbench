@@ -16,7 +16,10 @@
     "lib/client.js",
     "skills",
     "docs",
-    "cordis.patch.yml"
+    "cordis.patch.yml",
+    "skills/figure-style",
+    "skills/figure-composer",
+    "ATTRIBUTIONS.md"
   ],
   "keywords": [
     "dsh",

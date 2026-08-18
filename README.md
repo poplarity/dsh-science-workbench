@@ -41,6 +41,8 @@ Eight agent-facing tools, plus a browser workbench:
 
 The **“Analysis workbench”** tab shows the notebook, artifacts, provenance and feedback in a three-panel UI with inline figure preview (PNG/JPEG/SVG/PDF/TIFF/BMP).
 
+The plugin also bundles two **publication-grade figure skills** (adapted from Claude Science, Apache-2.0): `figure-style` (figure correctness & legibility rules + `apply_figure_style()`) and `figure-composer` (multi-panel figure composition with an adversarial self-review loop). See `skills/` and [ATTRIBUTIONS.md](./ATTRIBUTIONS.md).
+
 ## 📸 Feature showcase
 
 The **feedback → redraw loop** — every figure keeps its structured feedback history, and a one-click “让 agent 重画” (let the agent redraw) produces a derived version.

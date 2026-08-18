@@ -41,6 +41,8 @@
 
 **「分析工作台」** 标签页用三栏 UI 展示 notebook、产物、溯源与反馈，支持内联图预览（PNG/JPEG/SVG/PDF/TIFF/BMP）。
 
+插件还内置两个**出版级出图 skill**（改编自 Claude Science，Apache-2.0）：`figure-style`（图形正确性与易读性规则 + `apply_figure_style()`）与 `figure-composer`（多面板组合图 + 对抗式自审循环）。见 `skills/` 与 [ATTRIBUTIONS.md](./ATTRIBUTIONS.md)。
+
 ## 📸 功能展示
 
 反馈 → 重画回路 —— 每张图保留结构化反馈历史，一键「让 agent 重画」生成派生版本。
