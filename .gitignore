@@ -6,3 +6,5 @@ __pycache__/
 bio-projects/
 examples/*/figures/
 examples/*/data/
+.dsh-science-workbench.json
+.pybiomart.sqlite

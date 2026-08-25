@@ -40,7 +40,7 @@ Nine agent-facing tools, plus a browser workbench:
 | `bio_delete_cell` | Delete a cell and its produced artifacts (script + figures). |
 | `bio_mark_cell` | Mark a cell as a final (成品) artifact, or unmark it — flagged in the workbench and index. |
 
-The **“Analysis workbench”** tab shows the notebook, artifacts, provenance and feedback in a three-panel UI with inline figure preview (PNG/JPEG/SVG/PDF/TIFF/BMP), a **cell search box**, a **native directory picker** for the projects root, and a **mark-as-final** badge on completed cells.
+The **“Analysis workbench”** tab shows the notebook, artifacts, provenance and feedback in a three-panel UI with inline figure preview (PNG/JPEG/SVG/PDF/TIFF/BMP), a **searchable project picker** (filter by name, sorted by most-recent activity), a **cell search box**, a **native directory picker** for the projects root, and a **mark-as-final** badge on completed cells. Very large figures (multi-MB) load on demand and display in full.
 
 The plugin also bundles two **publication-grade figure skills** (adapted from Claude Science, Apache-2.0): `figure-style` (figure correctness & legibility rules + `apply_figure_style()`) and `figure-composer` (multi-panel figure composition with an adversarial self-review loop). See `skills/` and [ATTRIBUTIONS.md](./ATTRIBUTIONS.md).
 

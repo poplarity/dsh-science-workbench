@@ -47,12 +47,12 @@
    └─ <project>/code/ data/ figures/ manifest.json environment.lock .git/
 ```
 
-## 四、目录结构（本仓库，v0.2.0）
+## 四、目录结构（本仓库，v0.3.0）
 
 ```
 dsh-science-workbench/
-├─ lib/index.js        # Host 半（静态 ESM：执行/账本/工具/HTTP 数据路由）
-├─ lib/client.js       # Client 半（浏览器 bundle：工作台 tab + 检索 + 目录选择器 + 成品标记）
+├─ lib/index.js        # Host 半（静态 ESM：执行/账本/工具/HTTP 数据路由 + /biowb/figure 二进制图路由）
+├─ lib/client.js       # Client 半（浏览器 bundle：工作台 tab + 可检索项目选择器 + 目录选择器 + 成品标记）
 ├─ index.js            # 入口再导出（profile out-of-tree 解析兜底）
 ├─ cordis.patch.yml    # bundle 补丁（插入 dsh-science-workbench 行）
 ├─ skills/
@@ -66,14 +66,15 @@ dsh-science-workbench/
 └─ package.json README.md README.zh.md LICENSE CHANGELOG.md
 ```
 
-## 五、后端契约要点（v0.2.0，静态双面包）
+## 五、后端契约要点（v0.3.0，静态双面包）
 
 - **执行**：`ctx.get('shell')` → `resolve({command, workdir, timeoutMs, stdoutMaxBytes, signal, sandboxPolicy})` → `run(spec)` → `ShellRunResult{exitCode, stdout.text, stderr.text}`。Windows 上该服务为 PowerShell（pwsh-sandbox），macOS/Linux 为 bash。
 - **文件**：`ctx.get('fs')` → `resolve(path)` → `readText`/`writeText`/`listDir`/`readBytes`；`writeText` 无 expected 即无条件覆盖；目录创建用 shell 命令。
 - **工具**：`defineTool`（`@deepseek-ai/dsh-tools`）+ `ctx.tools.register`（Host 全局注册 `bio_*` 工具）。
 - **Client 数据**：浏览器经同源 `fetch('/biowb/<method>')`，Host 用 `webServer` 服务这些路由（**无 typert Remote 桥、无需 monorepo 构建**）。
 - **哈希**：无 crypto 内建 → macOS/Linux 用 shell `shasum -a 256`，Windows 用 `Get-FileHash`。
-- **图传递**：Host `fs.readBytes` → 手写 base64 → Client 渲染 `data:` URL。
+- **图传递（v0.3.0 重做）**：不再 base64 内联（旧版单图 4 MB 上限 + 数十 MB JSON 响应）——`getProject` 只回图元数据 + `/biowb/figure?name=&path=` URL，浏览器按需拉原始字节（100 MB 上限、1 小时缓存、路径穿越防护），超大图也能完整显示。
+- **项目日期索引（v0.3.0）**：`manifest.json` 记 `createdAt`/`updatedAt`（`writeManifest` 自动刷新）；`listProjects` 返回 `createdAt`/`updatedAt` 并按最近活跃排序；Client 可检索 combobox 按名称过滤 + 显示活动日期。
 - **沙箱**：当前 `runShell` 硬编码 `danger-full-access`（绕过 macOS sandbox-exec 问题的占位，见 §七 TODO）。
 
 ## 六、MVP 构建顺序
@@ -92,6 +93,7 @@ dsh-science-workbench/
 - **Windows 适配**（v0.1.1）：PowerShell 命令方言、`python`↔`python3`、盘符路径支持、`explorer` 定位。
 - **内置出版级出图 skill**（v0.2.0）：figure-style + figure-composer（Apache-2.0 归属见 ATTRIBUTIONS.md）。
 - **工作台增强**（v0.2.0）：原生目录选择器、cell 检索、`bio_mark_cell` 成品标记、首步引导。
+- **工作台体验升级**（v0.3.0）：可检索项目选择器 + 项目日期索引排序、`/biowb/figure` 二进制图路由（大图可显示）、`getProject` 去 base64（加载提速 ~600×）。
 
 ⏳ 待办：
 - 集群执行（对接现有 chipseq-cluster / cluster-ssh / remote-compute-ssh）
