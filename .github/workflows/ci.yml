@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Syntax check (Host + Client bundles)
+        run: |
+          node --check lib/index.js
+          node --check lib/client.js
+          node --check index.js
+      - name: Package contents sanity
+        run: |
+          node -e "const p=require('./package.json'); if(!p.dsh || !p.dsh.bundle) { console.error('missing dsh.bundle'); process.exit(1) } console.log('dsh.bundle OK, version', p.version)"
