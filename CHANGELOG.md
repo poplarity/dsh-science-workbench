@@ -5,6 +5,10 @@
 - 工作台：**重塑项目选择器** —— 工作台顶部**置顶下拉**（触发器显示当前项目名，点击展开**宽面板**）：项目名完整显示（自动换行不截断）、元数据独立列（cell/图数量 + 最近活动日期）、面板内置检索框按名称过滤、当前项目高亮；项目列表带 `createdAt`/`updatedAt` 日期索引并按最近活跃排序，新建的项目自动排最前。左侧栏固定宽度，不再被内容挤占右侧显示区。
 - 修复：**超大图无法显示** —— 图不再以 base64 内联进 JSON（旧版单图 4 MB 上限，超过即「无预览」），改为新增 `/biowb/figure` 二进制路由按需流式加载（上限提升到 100 MB，带 1 小时缓存 + 路径穿越防护）；PDF 同样走 URL 加载。
 - 性能：**打开工作台提速** —— `getProject` 响应不再内联全部图片字节，从数十 MB 级降到 KB 级；`<img loading="lazy">` 按需加载，多图项目首屏明显加快。
+- 适配：**支持 DSH 桌面版（Electron）** —— 桌面版使用独立的 `desktop` profile 且命令行拒绝写入，改为用界面内 **Plugins → Add plugin**（支持包名 / Git / 本地绝对路径）安装；peer 声明放宽为 `@deepseek-ai/dsh-tools >=0.1.0-rc.6`（原 `^0.1.0-rc.6` 上界是 `<0.2.0`，DSH `0.2.0-rc.2` 的兼容性检查会直接把插件判为 incompatible 并跳过加载）。
+- 兼容：**适配 DSH 0.2 的 shell 服务** —— 由 `shell.run(spec)` 改为 `shell.resolve()` → `shell.execute(spec)` → `execution.result()`（保留旧接口回退，老版本 DSH 仍可用）。
+- 修复：**项目根位于会话工作区之外时写入被沙箱拒绝** —— 插件发起的 `fs.writeText` 没有 session，沙箱策略会解析成 `workspace-write`（工作区 = 会话目录），于是写 `~/bio-projects` 下的 cell 脚本 / `manifest.json` 一律报 `file access denied`；现在显式传入 `danger-full-access` 策略（与 shell 层一致）。
+- Windows：**命令引号改用单引号字面量** —— PowerShell 的双引号会插值 `$` 与反引号，提交信息/路径可能被改写；**Python 解释器解析** —— `python` 不在 PATH 时自动回退 `py -3`，并用解析到的解释器运行 cell。
 
 ## 0.2.0
 

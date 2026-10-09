@@ -76,6 +76,16 @@ dsh plugin --profile web add file:/path/to/dsh-science-workbench
 
 Then restart `dsh web`. The `bio_*` tools become globally available, the workbench tab appears, and the plugin shows up under **Settings → Plugins**.
 
+### DSH desktop app
+
+The desktop app owns its own `desktop` profile, which the `dsh` CLI refuses to write (`profile "desktop" is managed exclusively by the Electron application`). Install from inside the app instead:
+
+1. Open **Plugins** in the sidebar.
+2. **Add plugin** → paste the package name (`dsh-science-workbench`) or the absolute path of a checkout (`/path/to/dsh-science-workbench`) → **Install** → **Enable now**.
+3. Restart the app so the Host half loads (module hot-reload deliberately ignores `node_modules`, so a linked checkout is not picked up while running).
+
+Projects may live outside the app's session workspace — point the plugin at your own root with `bio_set_projects_dir` (e.g. `~/bio-projects`); file writes are not fenced to the session workspace.
+
 ## 🚀 Quick start
 
 After installing and restarting, just ask the agent in plain language:

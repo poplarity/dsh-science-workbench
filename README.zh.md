@@ -76,6 +76,16 @@ dsh plugin --profile web add file:/path/to/dsh-science-workbench
 
 然后重启 `dsh web`。`bio_*` 工具全局可用、工作台标签页出现、插件在 **设置 → 插件** 里可见。
 
+### DSH 桌面版
+
+桌面版使用自己的 `desktop` profile，`dsh` 命令行拒绝写入它（`profile "desktop" is managed exclusively by the Electron application`）。请在界面内安装：
+
+1. 侧边栏打开 **Plugins**。
+2. **Add plugin** → 粘贴包名（`dsh-science-workbench`）或本地源码目录的绝对路径（`/path/to/dsh-science-workbench`）→ **Install** → **Enable now**。
+3. **重启桌面版**让 Host 半边加载（模块热重载按设计忽略 `node_modules`，所以运行期间不会热加载用 `link:` 装的源码目录）。
+
+项目可以放在会话工作区之外 —— 用 `bio_set_projects_dir` 指到你自己的根目录（例如 `~/bio-projects`），文件写入不受会话工作区沙箱限制。
+
 ## 🚀 快速上手
 
 装好并重启后，直接用大白话让 agent 干活：
