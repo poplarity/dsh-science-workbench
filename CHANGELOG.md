@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.3.1
 
+- **修复（重要，首次真正发布）：DSH 0.2 的 shell 服务适配此前从未进入 npm 包** —— registry 上的 0.3.0 tarball 里 `lib/index.js` 仍然是 `shell.run(spec)` 旧路径（`shell.execute` 出现 0 次），而 DSH 0.2 已移除 `shell.run`，因此**从 npm 安装 0.3.0 的用户，任何 `bio_*` 工具调用都会抛 `shell.run is not a function`**，插件实际不可用。0.3.0 的 CHANGELOG 已经写了这条修复，但那条 bullet 是在 0.3.0 发布之后补的，包本身没跟上。0.3.1 是第一次把 `shell.resolve()` → `shell.execute(spec)` → `execution.result()` 真正交付（保留旧接口回退），同时带上 Windows 单引号字面量转义与 `py -3` 解释器回退。
 - 约定：**出图一律走 nature-figure 规范（强制）** —— 打包的 `bio-workbench` skill 新增 §8：任何出现绘图库调用的 cell，动笔前必须先加载 `nature-figure`（`tfWuuu/nature-skills`），并遵守其五段式 figure contract、89/183 mm 期刊宽度、`PALETTE_*` 调色板、SVG 优先导出、≥5 pt 字号下限（禁用 mathtext）等硬性约定。同时把实操踩过的坑写死进约定：`'svg.fonttype': 'none'` 必须 mapping 写法、`figsize`/`dpi` 必须字面数字、校验器会扫 docstring、metagene 热图必须瘦长（长宽比 0.25–0.35）、四条门禁（`validate_figure` / `audit_pdf_text` / `audit_figure_collisions` / `require_matplotlib_panel_alignment`）全绿才算完成、WARN 视为返工。
 - 修复：**QA 临时产物污染分析结果** —— 审计（alignment / collision）必须照跑且仍然阻断交付，但产物改为写到**项目外的临时目录**，项目里只保留 `figures/` 与 `results/`。此前的写法把 overlay 写进项目：alignment overlay 是「每面板一个矩形 + PASS 页脚」的测量示意图，在 UI 里和图并列会被误认成坏图。约定同时明确 **QA 路径不得出现在 `outputs` 声明里**，并加了一条交付前幽灵 artifact 自查（`manifest.artifacts` 中 `os.path.exists` 为假的条目必须为空）。
 - 修复：**幽灵 artifact** —— 碰撞审计在 0 冲突时不写 overlay PDF，但若该路径被列进 `outputs`，账本会留下一条 `kind=figure` 却文件不存在的记录，工作台里点开为空。
