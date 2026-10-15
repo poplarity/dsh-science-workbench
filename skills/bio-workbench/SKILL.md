@@ -18,10 +18,25 @@ description: 生信分析工作台（dsh-science-workbench）的可复现分析�
 ├─ code/                # 每个 cell 一个自包含脚本 cell_0001.py / cell_0001_v2.py ...
 ├─ data/                # 输入数据（引用或副本）
 ├─ figures/             # 只放图：.svg / .pdf / .tiff / .png
-├─ qa/                  # 只放审计产物：*.alignment.{json,svg} / *.collision-audit.{json,pdf}
 ├─ results/             # 非图产物：tsv/csv/bed/npz + source data
 └─ .git/                # 项目自动 git（每次 cell 跑完/反馈 自动本地 commit，不 push）
 ```
+
+**项目里不保留 QA 产物。** 审计（alignment / collision）必须照跑，但它们的产物是 scratch：
+alignment overlay 是测量示意图（每个可比面板一个矩形 + PASS 页脚），collision overlay 标的是
+可疑的文字/描边碰撞。两者都不是图，摆在项目里就是**污染分析结果**，还会招来误解点击。
+一律写到项目外的临时目录，例如：
+
+```python
+import os, tempfile
+QADIR = os.path.join(tempfile.gettempdir(), 'nature-figure-qa',
+                     os.path.basename(os.path.abspath('.')))   # cwd = 项目根
+os.makedirs(QADIR, exist_ok=True)
+print(f'QA scratch dir (outside the project): {QADIR}')
+```
+
+并且**绝不把 QA 文件写进 `outputs` 声明**。踩过的坑：collision 审计在 0 冲突时不写 overlay PDF，
+但 `outputs` 里仍列着那个路径，于是账本里留下一条**文件不存在的幽灵 artifact**，在 UI 里点开就是空的。
 
 ## 2. cell 契约（脚本头声明块）
 
@@ -39,7 +54,8 @@ description: 生信分析工作台（dsh-science-workbench）的可复现分析�
 
 规则：
 - **图必须写到 `figures/` 下**（相对项目根路径），这样运行后能自动被发现并登记 provenance。
-- **审计产物写 `qa/`，绝不写 `figures/`**。`figures/` 被自动扫描并在 UI 里当图展示；把 alignment overlay 之类放进去会被误认成坏图（overlay 每面板一个矩形 + PASS 页脚，看起来就是一页框）。
+- **审计产物写到项目外的临时目录，绝不写进项目**（见 §1）。`figures/` 被自动扫描并在 UI 里当图展示；alignment overlay 每面板一个矩形 + PASS 页脚，放进去会被误认成坏图。
+- **QA 路径不要出现在 `outputs` 里**，否则会留下文件不存在的幽灵 artifact。
 - 非图的中间产物（tsv/csv/bed 等）通过 `outputs` 显式声明，放 `results/`。
 - 脚本要**自包含**：显式读输入、写输出；cwd = 项目根；用相对路径。
 
@@ -131,13 +147,14 @@ description: 生信分析工作台（dsh-science-workbench）的可复现分析�
 
 ```bash
 SKILL=<nature-skills>/skills/nature-figure
+QADIR=$TMPDIR/nature-figure-qa/<project>      # 项目外，见 §1
 # 1) 源码预检 —— 必须 READY FOR VISUAL QA
 python $SKILL/scripts/validate_figure.py --backend python code/cell_XXXX.py
 # 2) 渲染后字号下限 —— 必须 PASS
 python $SKILL/scripts/audit_pdf_text.py figures/<fig>.pdf --min-pt 5
 # 3) 渲染后碰撞审计 —— 必须 0 fail / 0 warn
 python $SKILL/scripts/audit_figure_collisions.py figures/<fig>.pdf \
-  --json-out qa/<fig>.collision-audit.json --overlay-pdf qa/<fig>.collision-audit.pdf
+  --json-out $QADIR/<fig>.collision-audit.json --overlay-pdf $QADIR/<fig>.collision-audit.pdf
 ```
 
 4. **面板对齐门禁**在 cell **内部**调用（最后一次 layout draw 之后、导出之前）：
@@ -145,7 +162,7 @@ python $SKILL/scripts/audit_figure_collisions.py figures/<fig>.pdf \
 ```python
 from audit_panel_alignment import require_matplotlib_panel_alignment
 require_matplotlib_panel_alignment(
-    fig, json_out=f'qa/{name}.alignment.json', overlay_svg=f'qa/{name}.alignment.svg',
+    fig, json_out=f'{QADIR}/{name}.alignment.json', overlay_svg=f'{QADIR}/{name}.alignment.svg',
     tolerance_pt=1.5, gutter_tolerance_pt=1.5, strict=True,
     axes=[...], panel_ids=[...], row_groups=[...], column_groups=[...], exclude_axes=[colorbar.ax])
 ```
@@ -156,7 +173,8 @@ require_matplotlib_panel_alignment(
 
 ### 8.4 收尾
 
-- **QA 产物一律进 `qa/`**（详见 §2）。
+- **QA 产物一律写到项目外的临时目录**（见 §1），项目里只留图和 results；**不要**把 QA 路径写进 `outputs`。
+- 交付前核对账本无幽灵 artifact：`python -c "import json,os;m=json.load(open('manifest.json'));print([a['path'] for a in m['artifacts'] if not os.path.exists(a['path'])])"` 应输出 `[]`。
 - **逐面板目视检查**（final physical size）后才交付；程序化检查不能替代目视。
 - 把"失败 → 改 → 重跑"的链条写进 cell docstring，并保留失败那次 cell（它是迭代证据）。
 - 迭代稳定后用 `bio_delete_cell` 清掉被取代的版本，避免产物堆积；完整历史仍在 git log 里。
