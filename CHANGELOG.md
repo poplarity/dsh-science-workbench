@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- 约定：**出图一律走 nature-figure 规范（强制）** —— 打包的 `bio-workbench` skill 新增 §8：任何出现绘图库调用的 cell，动笔前必须先加载 `nature-figure`（`tfWuuu/nature-skills`），并遵守其五段式 figure contract、89/183 mm 期刊宽度、`PALETTE_*` 调色板、SVG 优先导出、≥5 pt 字号下限（禁用 mathtext）等硬性约定。同时把实操踩过的坑写死进约定：`'svg.fonttype': 'none'` 必须 mapping 写法、`figsize`/`dpi` 必须字面数字、校验器会扫 docstring、metagene 热图必须瘦长（长宽比 0.25–0.35）、四条门禁（`validate_figure` / `audit_pdf_text` / `audit_figure_collisions` / `require_matplotlib_panel_alignment`）全绿才算完成、WARN 视为返工。
+- 修复：**QA 临时产物污染分析结果** —— 审计（alignment / collision）必须照跑且仍然阻断交付，但产物改为写到**项目外的临时目录**，项目里只保留 `figures/` 与 `results/`。此前的写法把 overlay 写进项目：alignment overlay 是「每面板一个矩形 + PASS 页脚」的测量示意图，在 UI 里和图并列会被误认成坏图。约定同时明确 **QA 路径不得出现在 `outputs` 声明里**，并加了一条交付前幽灵 artifact 自查（`manifest.artifacts` 中 `os.path.exists` 为假的条目必须为空）。
+- 修复：**幽灵 artifact** —— 碰撞审计在 0 冲突时不写 overlay PDF，但若该路径被列进 `outputs`，账本会留下一条 `kind=figure` 却文件不存在的记录，工作台里点开为空。
+- 约定补充：`bio_rerun_cell` 必须传 `name`；`bio_delete_cell` / `bio_mark_cell` 进工具速查表；与插件自带 `figure-style` / `figure-composer` 的优先级（论文级出图以 `nature-figure` 为准，不混用两套风格函数）。
+- 维护：打包的 `bio-workbench` skill 说明新增 nature-figure 触发词；`~/.agents/skills/bio-workbench` 与 `~/.agents/skills/nature-figure` 通过 symlink 指向 canonical 位置，避免多份副本漂移。
+
 ## 0.3.0
 
 - 工作台：**重塑项目选择器** —— 工作台顶部**置顶下拉**（触发器显示当前项目名，点击展开**宽面板**）：项目名完整显示（自动换行不截断）、元数据独立列（cell/图数量 + 最近活动日期）、面板内置检索框按名称过滤、当前项目高亮；项目列表带 `createdAt`/`updatedAt` 日期索引并按最近活跃排序，新建的项目自动排最前。左侧栏固定宽度，不再被内容挤占右侧显示区。
