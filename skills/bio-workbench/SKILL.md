@@ -96,6 +96,26 @@ print(f'QA scratch dir (outside the project): {QADIR}')
 | `bio_mark_cell` | 标/取消成品（`final`），UI 里高亮 |
 | `bio_get_project` / `bio_list_projects` | 查账本 |
 
+### 5.1 两个必须知道的工具陷阱（实测确认，非推测）
+
+**① `bio_rerun_cell` 会丢掉上一版声明的 `outputs`。**
+`lib/index.js` 的 `rerunCell` 里 meta 写死 `outputs: []`（只继承 `inputs`/`params`/`seed`/`title`）。
+后果：重跑 cell 写出的 `results/*.tsv` **不会进 manifest 的 artifact 注册表**，且新脚本头部显示
+`# @outputs: []`。图仍然会自动发现并登记。所以**重跑后要回头核对非图产物是否还登记着**。
+
+**② `bio_delete_cell` 按路径删注册，会连带抹掉别的 cell 的共享登记。**
+manifest 里 `producedBy` 是**字符串**；同一个路径被两个 cell 产出时是**两条重复条目**（不是一个数组）。
+而 `deleteCell` 用 `artifacts.filter(a => artPaths.indexOf(a.path) === -1)` —— 按 path 过滤，
+于是删掉任一生产者就会把该路径的**所有**条目清掉。
+后果：删旧版本 cell 时，新旧共用的 `results/` 表会**连新 cell 的登记一起消失**（文件仍在磁盘、仍被 git 跟踪）。
+想保住 provenance，就在删之前先把共用产物记下来，或干脆保留旧 cell 不删。
+
+**③ 两个操作都没有锁。**每次调用都是对 `manifest.json` 的 read-modify-write，
+**必须串行**；并行调用（包括多个子代理同时改同一个项目）会丢失更新。
+
+**④ `bio_delete_cell` 会 `rm -f` 掉该 cell 的脚本**（`code/cell_XXXX.py`）。
+那是工具固有能力、不是可选行为，脚本只能从 git 历史里找回。
+
 ## 6. 可复现性三条铁律
 
 1. **脚本自包含**：cell 显式声明 inputs/outputs，全新子进程运行，不依赖热内核状态。
