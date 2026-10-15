@@ -1,0 +1,158 @@
+name: Publish to npm
+
+# Release by tag: push a `v<version>` tag and the package goes to npmjs.org with
+# a provenance attestation. No long-lived npm token is stored anywhere - the
+# GitHub Actions OIDC token is exchanged for publish rights at release time.
+#
+# ONE-TIME SETUP, on npmjs.org (not in this repo):
+#   Package → Settings → Trusted Publisher → GitHub Actions
+#     Organization / User : poplarity
+#     Repository          : dsh-science-workbench
+#     Workflow filename   : publish.yml      <- BASENAME ONLY, not the full path
+#     Environment         : (leave blank)
+#   npm matches those four claims against this workflow's OIDC token. If any one
+#   of them differs, `npm publish` returns 404 with a message about the package
+#   not being found - which reads like a permissions problem but is really a
+#   config mismatch. The "OIDC publish context" step below prints the claims so
+#   a failure can be diffed against the config.
+#
+# To release:
+#   1. bump package.json version (and move the CHANGELOG's Unreleased entries)
+#   2. commit, then tag the release commit:  git tag -a v0.3.2 -m v0.3.2
+#   3. push branch and tag:                  git push origin main && git push origin v0.3.2
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: npm-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write        # REQUIRED: npm exchanges this for publish rights (OIDC)
+
+jobs:
+  publish:
+    name: Publish to npmjs.org with provenance
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Node 24 ships npm 11.x. Trusted publishing needs npm >= 11.5.1, and the
+      # failure mode on npm 10.x is misleading: the OIDC handshake succeeds and
+      # a provenance attestation is produced, but the publish PUT is sent
+      # without OIDC auth headers, so npmjs.org answers 404 - indistinguishable
+      # from a missing trusted-publisher config. Pin a Node that clears the bar.
+      - name: Setup Node with the npmjs.org registry
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          registry-url: https://registry.npmjs.org
+
+      - name: Check npm clears the trusted-publishing floor
+        run: |
+          set -euo pipefail
+          node -v; npm -v
+          node -e '
+            const v = require("child_process").execSync("npm -v").toString().trim();
+            const [maj, min] = v.split(".").map(Number);
+            if (maj < 11 || (maj === 11 && min < 5)) {
+              console.error(`npm ${v} < 11.5.1 - trusted publishing would 404.`);
+              process.exit(1);
+            }
+            console.log(`npm ${v} satisfies >= 11.5.1`);
+          '
+
+      - name: Verify the tag matches package.json
+        id: ver
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF#refs/tags/}"
+          case "$TAG" in
+            v*) ;;
+            *) echo "::error::refusing to publish a non-release ref: $TAG"; exit 1 ;;
+          esac
+          VERSION="$(node -p 'require("./package.json").version')"
+          if [ "${TAG#v}" != "$VERSION" ]; then
+            echo "::error::tag ${TAG} does not match package.json ${VERSION}"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Publishing dsh-science-workbench@${VERSION}"
+
+      - name: Same checks as CI
+        run: |
+          set -euo pipefail
+          node --check index.js
+          node --check lib/index.js
+          node --check lib/client.js
+          node -e 'const p=require("./package.json"); if(!p.dsh||!p.dsh.bundle){console.error("missing dsh.bundle");process.exit(1)}'
+
+      - name: Show exactly what will be published
+        run: npm pack --dry-run
+
+      # setup-node writes an .npmrc whose authToken line references
+      # ${NODE_AUTH_TOKEN}. Trusted publishing must present NO bearer token, so
+      # when that variable is unset the line is dropped rather than left to
+      # expand to an empty Authorization header.
+      - name: Make sure no bearer token is configured
+        run: |
+          set -euo pipefail
+          NPMRC="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
+          if [ -f "$NPMRC" ] && [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            grep -v '_authToken' "$NPMRC" > "${NPMRC}.clean" || true
+            mv "${NPMRC}.clean" "$NPMRC"
+          fi
+          echo "effective .npmrc (token redacted):"
+          sed 's/_authToken=.*/_authToken=<redacted>/' "$NPMRC" 2>/dev/null || echo "  (none)"
+
+      - name: OIDC publish context
+        run: |
+          set -euo pipefail
+          echo "  repository        : ${GITHUB_REPOSITORY}"
+          echo "  repository_owner  : ${GITHUB_REPOSITORY_OWNER}"
+          echo "  workflow file     : $(basename "${GITHUB_WORKFLOW_REF%%@*}")"
+          echo "  ref               : ${GITHUB_REF}"
+          echo "  actor             : ${GITHUB_ACTOR}"
+          echo "  node / npm        : $(node -v) / $(npm -v)"
+
+      - name: Publish with provenance
+        run: npm publish --provenance --access public
+
+      # A publish that lands without provenance would otherwise look identical
+      # to a correct one. Fail loudly instead.
+      - name: Verify the version is live and carries provenance
+        run: |
+          set -euo pipefail
+          V="${{ steps.ver.outputs.version }}"
+          PKG="dsh-science-workbench"
+          GOT=""
+          for i in 1 2 3 4 5 6 7 8; do
+            GOT="$(npm view "${PKG}@${V}" version 2>/dev/null || true)"
+            [ "$GOT" = "$V" ] && break
+            echo "attempt ${i}: not visible on the registry yet; waiting 20s"
+            sleep 20
+          done
+          if [ "$GOT" != "$V" ]; then
+            echo "::error::${PKG}@${V} never became visible on npmjs.org"
+            exit 1
+          fi
+          echo "OK: ${PKG}@${V} is live"
+
+          ATTEST="$(npm view "${PKG}@${V}" --json | node -e '
+            let s = ""; process.stdin.on("data", d => s += d).on("end", () => {
+              const j = JSON.parse(s);
+              process.stdout.write(j.dist && j.dist.attestations ? "present" : "");
+            });')"
+          if [ -z "$ATTEST" ]; then
+            echo "::error::published without a provenance attestation - OIDC is misconfigured"
+            exit 1
+          fi
+          echo "OK: provenance attestation present"
+          echo "verify with: npm view ${PKG}@${V} --json | jq .dist.attestations"

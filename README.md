@@ -168,6 +168,41 @@ dsh plugin --profile web add file:$(pwd)
 
 Structure: `lib/index.js` (Host) · `lib/client.js` (Client bundle) · `index.js` (entry re-export) · `cordis.patch.yml` (bundle patch) · `skills/` (convention skill) · `docs/` (design doc) · `examples/` (example project).
 
+## 📦 Releasing
+
+Publishing runs on **npm Trusted Publishing (OIDC)** — `.github/workflows/publish.yml`
+fires on a `v*` tag and exchanges the GitHub Actions OIDC token for publish
+rights. **No npm token is stored in this repo or in CI secrets.**
+
+One-time setup, on npmjs.org (not in the repo): *Package → Settings → Trusted
+Publisher → GitHub Actions*, with `poplarity` / `dsh-science-workbench` /
+`publish.yml` (the **basename**, not `.github/workflows/publish.yml`) and an empty
+environment. npm matches those claims exactly; a mismatch comes back as a `404`
+on `PUT`, which reads like a permissions error but is a config mismatch.
+
+To cut a release:
+
+```bash
+# 1. move CHANGELOG entries out of "Unreleased" into the new version section
+# 2. bump version in package.json
+git commit -am "v0.3.2: ..."
+git tag -a v0.3.2 -m v0.3.2          # tag must equal v<package.json version>
+git push origin main && git push origin v0.3.2
+```
+
+The workflow fails fast if the tag does not match `package.json`, checks the
+runner's npm is ≥ 11.5.1, publishes with `--provenance`, then re-reads the
+registry to confirm the version is live **and** carries a provenance
+attestation. Verify a release with:
+
+```bash
+npm view dsh-science-workbench@<version> --json | jq .dist.attestations
+```
+
+> npm 10.x is not sufficient: the OIDC handshake still succeeds and a provenance
+> attestation is produced, but the publish request goes out without OIDC auth
+> headers and is rejected with `404`. Node 24 (npm 11.x) clears this.
+
 ## License
 
 [MIT](./LICENSE)
