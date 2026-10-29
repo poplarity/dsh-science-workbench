@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- 修复：**热替换后样式表不更新** —— `apply()` 以前只判断 `<style data-biowb-css>` 是否存在，宿主 HMR 换掉 `client.js` 后旧 CSS 一直留着，新类名完全没有样式（表现是"布局在、样式全丢"）。改为按 CSS 内容指纹重写，样式改动也能原地热替换。
+- 工作台：**左侧步骤栏可收起** —— 步骤栏本身保持原样（320 px、`分析步骤` 标题、检索、步骤卡），标题行右侧加了一个 `«` 收起按钮。收起后右侧产物区占满整宽，顶部留一个 `☰ 分析步骤 · N` 按钮一键恢复；收起状态记在 `localStorage`，切标签不丢。这是为了不让步骤数量继续挤占出图区域，又不改变原来的阅读方式。
 - 开发环境：新增 `scripts/dev.sh`（`npm run dev` / `dev:restart` / `dev:status` / `dev:stop`）—— 在 `.dev/` 里起一个独立宿主（`web` profile，端口 5691），数据与设置都隔离在 `.dev/`，不碰桌面 App 的工作区和真实 `bio-projects/`。宿主改动重启约 3 秒。
 - 开发环境：新增 `scripts/smoke.sh`（`npm run smoke`）—— 不开浏览器就能跑完整 Host 契约：`listProjects → setProjectsDir → initProject → runCell → getProject → addFeedback → rerunCell → deleteCell → markCellFinal`，任一断言失败非零退出。
 - 开发环境：新增 `npm run check`（三个入口一起 `node --check`）。

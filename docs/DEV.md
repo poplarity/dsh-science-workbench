@@ -88,10 +88,12 @@ curl -s -X POST http://127.0.0.1:5691/biowb/runCell \
 
 宿主日志：`.dev/dev-server.log`（`npm run dev` 之后 `bash scripts/dev.sh log` 可跟）。
 
-## 两个容易踩的坑
+## 三个容易踩的坑
 
 1. **客户端 bundle 带 `Cache-Control: immutable, max-age=1y`**，URL 里带 `&rev=<内容哈希>`。所以改完看不到变化，先确认页面拿到的 `rev` 变了（上面那条 SSE 命令），而不是去清缓存。
 2. **`addFeedback` 是按 artifact 记的，不是按 cell**：必须给 `artifactPath`（如 `figures/cell_0001_tss.png`），传 `cellId` 会报 `artifact not found: undefined`。`rerunCell` 才是按 `cellId` 派生新版本。
+
+3. **热替换不会重写 `<style>`**：`apply()` 里样式表按内容指纹（`data-biowb-css`）重写，所以改 CSS 也能热替换；早期版本只判断 `style` 标签是否存在，HMR 之后新类名会裸奔（布局在、样式全丢）。样式没生效先怀疑这一点，别急着清缓存。
 
 ## 发布
 
