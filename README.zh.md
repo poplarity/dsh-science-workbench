@@ -159,14 +159,21 @@ agent 会替你驱动工具。等价的手动流程是：
 git clone https://github.com/poplarity/dsh-science-workbench
 cd dsh-science-workbench
 
-# 语法检查
-npm run lint
-
-# 装进你的 profile 并重启
-dsh plugin --profile web add file:$(pwd)
+npm run check          # 三个入口的 node --check
+npm run dev            # 开发宿主 :5691（link: 安装，数据隔离在 .dev/）
+npm run smoke          # 对宿主跑全链路断言
+npm run dev:restart    # 改完 lib/index.js 后重启（约 3 秒）
 ```
 
-结构：`lib/index.js`（Host）· `lib/client.js`（Client bundle）· `index.js`（入口再导出）· `cordis.patch.yml`（bundle 补丁）· `skills/`（约定 skill）· `docs/`（设计文档）· `examples/`（示例项目）。
+装进 profile 要用 **link**，不要用 `file:`（pnpm 会把 `file:` 当快照拷贝，之后 profile 就不再跟着你的工作区走）：
+
+```bash
+dsh plugin --profile web add "link:$(pwd)"
+```
+
+`lib/client.js` 在已打开页面里热替换（宿主推 `rebuilt` 事件）；`lib/index.js` 必须重启宿主，因为模块热重载刻意忽略 `node_modules`。完整回路、坑与调试命令见 [docs/DEV.md](docs/DEV.md)。
+
+结构：`lib/index.js`（Host）· `lib/client.js`（Client bundle）· `index.js`（入口再导出）· `cordis.patch.yml`（bundle 补丁）· `scripts/`（开发宿主 + 冒烟）· `skills/`（约定 skill）· `docs/`（设计文档 + 开发指南）· `examples/`（示例项目）。
 
 ## License
 

@@ -39,7 +39,13 @@
     "access": "public"
   },
   "scripts": {
-    "lint": "node --check lib/index.js"
+    "lint": "node --check lib/index.js",
+    "check": "node --check index.js && node --check lib/index.js && node --check lib/client.js",
+    "dev": "bash scripts/dev.sh start",
+    "dev:stop": "bash scripts/dev.sh stop",
+    "dev:restart": "bash scripts/dev.sh restart",
+    "dev:status": "bash scripts/dev.sh status",
+    "smoke": "bash scripts/smoke.sh"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",

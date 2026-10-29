@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- 开发环境：新增 `scripts/dev.sh`（`npm run dev` / `dev:restart` / `dev:status` / `dev:stop`）—— 在 `.dev/` 里起一个独立宿主（`web` profile，端口 5691），数据与设置都隔离在 `.dev/`，不碰桌面 App 的工作区和真实 `bio-projects/`。宿主改动重启约 3 秒。
+- 开发环境：新增 `scripts/smoke.sh`（`npm run smoke`）—— 不开浏览器就能跑完整 Host 契约：`listProjects → setProjectsDir → initProject → runCell → getProject → addFeedback → rerunCell → deleteCell → markCellFinal`，任一断言失败非零退出。
+- 开发环境：新增 `npm run check`（三个入口一起 `node --check`）。
+- 文档：新增 `docs/DEV.md` —— 两条开发回路（`lib/client.js` 经 `/plugins/events` 的 `rebuilt` 事件原地热替换；`lib/index.js` 必须重启，因为模块热重载刻意忽略 `node_modules`）、profile 软链关系、接口速查，以及两个踩过的坑（bundle 带 `immutable` 缓存靠 `&rev=` 失效；`addFeedback` 按 artifact 而非 cell 记账）。
+- 修复（开发环境）：`web` profile 里的 `dsh-science-workbench` 曾以 `file:` 安装，pnpm 拷了一份 0.3.0 快照，导致"改了代码看不出变化"。已改为 `link:`；README / README.zh 的开发段落同时改掉 `file:` 的装法。
+
 ## 0.3.1
 
 - **修复（重要，首次真正发布）：DSH 0.2 的 shell 服务适配此前从未进入 npm 包** —— registry 上的 0.3.0 tarball 里 `lib/index.js` 仍然是 `shell.run(spec)` 旧路径（`shell.execute` 出现 0 次），而 DSH 0.2 已移除 `shell.run`，因此**从 npm 安装 0.3.0 的用户，任何 `bio_*` 工具调用都会抛 `shell.run is not a function`**，插件实际不可用。0.3.0 的 CHANGELOG 已经写了这条修复，但那条 bullet 是在 0.3.0 发布之后补的，包本身没跟上。0.3.1 是第一次把 `shell.resolve()` → `shell.execute(spec)` → `execution.result()` 真正交付（保留旧接口回退），同时带上 Windows 单引号字面量转义与 `py -3` 解释器回退。

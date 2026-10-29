@@ -159,14 +159,21 @@ It runs in a **fresh subprocess** with `cwd = project root`. On completion the H
 git clone https://github.com/poplarity/dsh-science-workbench
 cd dsh-science-workbench
 
-# lint (syntax check)
-npm run lint
-
-# install into your profile and restart
-dsh plugin --profile web add file:$(pwd)
+npm run check          # node --check on all three entry points
+npm run dev            # dev host on :5691 (link: install, isolated .dev/ data)
+npm run smoke          # end-to-end assertions against that host
+npm run dev:restart    # after editing lib/index.js (~3 s)
 ```
 
-Structure: `lib/index.js` (Host) · `lib/client.js` (Client bundle) · `index.js` (entry re-export) · `cordis.patch.yml` (bundle patch) · `skills/` (convention skill) · `docs/` (design doc) · `examples/` (example project).
+Install into a profile with a **link**, never `file:` (pnpm copies a `file:` snapshot, so the profile stops tracking your checkout):
+
+```bash
+dsh plugin --profile web add "link:$(pwd)"
+```
+
+`lib/client.js` hot-swaps in an open page (the Host pushes a `rebuilt` event); `lib/index.js` needs a host restart, since module hot-reload deliberately ignores `node_modules`. Full loop, gotchas and debugging commands: [docs/DEV.md](docs/DEV.md).
+
+Structure: `lib/index.js` (Host) · `lib/client.js` (Client bundle) · `index.js` (entry re-export) · `cordis.patch.yml` (bundle patch) · `scripts/` (dev host + smoke) · `skills/` (convention skill) · `docs/` (design doc + dev guide) · `examples/` (example project).
 
 ## 📦 Releasing
 
